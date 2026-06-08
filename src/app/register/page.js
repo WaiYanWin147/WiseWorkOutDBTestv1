@@ -1,0 +1,339 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+export default function RegisterPage() {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [emailError, setEmailError] = useState("");
+
+  function isCorrectEmailFormat(emailValue) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(emailValue);
+  }
+
+  function handleEmailChange(event) {
+    const newEmail = event.target.value;
+    setEmail(newEmail);
+
+    if (newEmail === "") {
+      setEmailError("");
+      return;
+    }
+
+    if (!isCorrectEmailFormat(newEmail)) {
+      setEmailError("Please enter your correct email");
+    } else {
+      setEmailError("");
+    }
+  }
+
+  function handleCreateAccount(event) {
+    event.preventDefault();
+
+    if (!isCorrectEmailFormat(email)) {
+      setEmailError("Please enter your correct email");
+      return;
+    }
+
+    alert("Account creation frontend is working. Supabase Auth can be connected later.");
+  }
+
+  function handleGoogleRegister() {
+    alert("Google sign-up button is ready. Supabase Google Auth can be connected later.");
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f8f8ff] text-black">
+      {/* Navbar */}
+      <nav className="h-[78px] bg-white flex items-center justify-between px-10 md:px-12 shadow-sm">
+        <Link href="/" className="text-[22px] font-bold tracking-tight">
+          ShapeRush
+        </Link>
+
+        <div className="hidden md:flex items-center gap-9 text-[13px] font-medium">
+          <Link href="/">Home</Link>
+          <Link href="/#features">Features</Link>
+          <Link href="/#plans">Plans</Link>
+          <Link href="/#reviews">Reviews</Link>
+          <Link href="/#faq">FAQ</Link>
+        </div>
+
+        <Link
+          href="/register"
+          className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
+        >
+          Register
+        </Link>
+      </nav>
+
+      {/* Register Content */}
+      <section className="min-h-[760px] flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-[420px] bg-white rounded-[22px] shadow-sm px-12 py-12">
+          <div className="text-center">
+            <h1 className="text-[22px] font-bold">
+              Create your account
+            </h1>
+
+            <p className="mt-3 text-[14px] font-semibold text-gray-500">
+              Start your fitness journey today.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleRegister}
+            className="mt-9 w-full h-[46px] border border-gray-300 rounded-lg flex items-center justify-center gap-3 text-[14px] font-semibold hover:bg-gray-50"
+          >
+            <span className="text-[20px] font-bold">
+              <span className="text-blue-500">G</span>
+            </span>
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-4 my-8">
+            <div className="h-px bg-gray-200 flex-1" />
+            <span className="text-[13px] text-gray-500">or</span>
+            <div className="h-px bg-gray-200 flex-1" />
+          </div>
+
+          <form onSubmit={handleCreateAccount}>
+            {/* Full Name */}
+            <div className="mb-7">
+              <label className="block text-[14px] font-bold mb-3">
+                Full Name<span className="text-red-500">*</span>
+              </label>
+
+              <div className="h-[48px] border border-gray-300 rounded-lg flex items-center px-4 gap-3">
+                <UserIcon />
+
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="mb-7">
+              <label className="block text-[14px] font-bold mb-3">
+                Email<span className="text-red-500">*</span>
+              </label>
+
+              <div className="h-[48px] border border-gray-300 rounded-lg flex items-center px-4 gap-3">
+                <EmailIcon />
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  placeholder="Enter your email"
+                  className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
+                />
+              </div>
+
+              {emailError !== "" && (
+                <p className="mt-2 text-[12px] text-red-500">
+                  {emailError}
+                </p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div className="mb-2">
+              <label className="block text-[14px] font-bold mb-3">
+                Password<span className="text-red-500">*</span>
+              </label>
+
+              <div className="h-[48px] border border-gray-300 rounded-lg flex items-center px-4 gap-3">
+                <LockIcon />
+
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Create a password"
+                  className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
+                />
+
+                <EyeIcon />
+              </div>
+
+              <div className="mt-2 flex items-center gap-2 text-[12px] text-gray-500">
+                <ShieldIcon />
+                <span>At least 8 characters</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="mt-7 w-full h-[52px] bg-[#6c5cff] text-white rounded-lg text-[14px] font-semibold hover:bg-[#5b4bea]"
+            >
+              Create Account
+            </button>
+
+            <p className="mt-6 text-center text-[13px] leading-6 text-gray-500">
+              By creating an account, you agree to our{" "}
+              <Link
+                href="/terms-and-conditions"
+                className="text-[#6c5cff] font-semibold"
+              >
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy-policy"
+                className="text-[#6c5cff] font-semibold"
+              >
+                Privacy Policy.
+              </Link>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-white px-10 md:px-12 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div>
+          <h2 className="text-[34px] font-bold">ShapeRush</h2>
+
+          <p className="mt-5 text-[14px] leading-6 text-gray-500">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            dolor sit tincidunt ut labore et dolore magna aliqua. Dolor sit
+            amet, consectetur adipiscing elit.
+          </p>
+
+          <p className="mt-5 text-gray-500">©2026 by ShapeRush</p>
+        </div>
+
+        <div>
+          <p className="text-[#6c5cff] text-[14px] mb-5">Address</p>
+
+          <div className="space-y-3 text-[15px]">
+            <p>641 Clementi Road,</p>
+            <p>Singapore 556431</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[#6c5cff] text-[14px] mb-5">Legal</p>
+
+          <div className="space-y-3 text-[15px]">
+            <Link href="/privacy-policy" className="block">
+              Privacy Policy
+            </Link>
+
+            <Link href="/terms-and-conditions" className="block">
+              Terms and Conditions
+            </Link>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[#6c5cff] text-[14px] mb-5">Contact Us</p>
+
+          <div className="space-y-3 text-[15px]">
+            <p>shaperush@gmail.com</p>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9ca3af"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9ca3af"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9ca3af"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9ca3af"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="m3 3 18 18" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9ca3af"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
