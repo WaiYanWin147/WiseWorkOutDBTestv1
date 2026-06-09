@@ -129,7 +129,7 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setRole("client")}
+                    onClick={() => { setRole("client"); setFullName(""); setEmail(""); setPassword(""); setEmailError(""); }}
                     className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
                       ${role === "client" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
                   >
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRole("fitness_professional")}
+                    onClick={() => { setRole("fitness_professional"); setFullName(""); setEmail(""); setPassword(""); setEmailError(""); }}
                     className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
                       ${role === "fitness_professional" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
                   >
