@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase"; 
+
+
+
+
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -31,7 +36,7 @@ export default function RegisterPage() {
     }
   }
 
-  function handleCreateAccount(event) {
+  async function handleCreateAccount(event) {
     event.preventDefault();
 
     if (!isCorrectEmailFormat(email)) {
@@ -39,13 +44,27 @@ export default function RegisterPage() {
       return;
     }
 
-    alert("Account creation frontend is working. Supabase Auth can be connected later.");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {full_name: fullName}
+      }
+    })
+    
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Account created successfully");
+    }
   }
+  
 
   function handleGoogleRegister() {
     alert("Google sign-up button is ready. Supabase Google Auth can be connected later.");
   }
-
+//   alert("Account creation frontend is working. Supabase Auth can be connected later.");
+  // }
   return (
     <main className="min-h-screen bg-[#f8f8ff] text-black">
       {/* Navbar */}
