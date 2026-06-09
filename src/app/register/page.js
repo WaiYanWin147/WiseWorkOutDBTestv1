@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 
 
 export default function RegisterPage() {
+  const [role, setRole] = useState("client");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +49,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: {full_name: fullName}
+        data: {full_name: fullName, role: role}
       }
     })
     
@@ -120,6 +121,33 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleCreateAccount}>
+            {/* Role Selection */}
+            <div className="mb-7">
+              <label className="block text-[14px] font-bold mb-3">
+                Create Account As
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("client")}
+                    className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
+                      ${role === "client" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                  >
+                    <UserIcon />
+                    Client
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("fitness_professional")}
+                    className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
+                      ${role === "fitness_professional" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                  >
+                    <FitnessIcon />
+                    Fitness Professional
+                  </button>
+                  </div>
+            </div>
+
             {/* Full Name */}
             <div className="mb-7">
               <label className="block text-[14px] font-bold mb-3">
@@ -266,6 +294,8 @@ export default function RegisterPage() {
   );
 }
 
+
+
 function UserIcon() {
   return (
     <svg
@@ -335,6 +365,27 @@ function EyeIcon() {
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
       <path d="m3 3 18 18" />
+    </svg>
+  );
+}
+
+function FitnessIcon() {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.5 6.5h11"/>
+      <path d="M6.5 17.5h11"/>
+      <path d="M3 9.5h2.5v5H3z"/>
+      <path d="M18.5 9.5H21v5h-2.5z"/>
+      <path d="M5.5 12h13"/>
     </svg>
   );
 }
