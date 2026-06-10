@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase"; 
-
-
-
-
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [role, setRole] = useState("client");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,32 +40,54 @@ export default function RegisterPage() {
   async function handleCreateAccount(event) {
     event.preventDefault();
 
+    if (!fullName.trim()) {
+      alert("Please enter your full name.");
+      return;
+    }
+
     if (!isCorrectEmailFormat(email)) {
       setEmailError("Please enter your correct email");
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    if (password.length < 8) {
+      alert("Password must be at least 8 characters.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {full_name: fullName, role: role}
-      }
-    })
-    
+        data: {
+          full_name: fullName,
+          role: role,
+        },
+        emailRedirectTo: `${window.location.origin}/welcome`,
+      },
+    });
+
     if (error) {
       alert(error.message);
-    } else {
-      alert("Account created successfully");
+      return;
+    }
+
+    router.push(`/check-email?email=${encodeURIComponent(email)}`);
+  }
+
+  async function handleGoogleRegister() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) {
+      alert(error.message);
     }
   }
-  
 
-  function handleGoogleRegister() {
-    alert("Google sign-up button is ready. Supabase Google Auth can be connected later.");
-  }
-//   alert("Account creation frontend is working. Supabase Auth can be connected later.");
-  // }
   return (
     <main className="min-h-screen bg-[#f8f8ff] text-black">
       {/* Navbar */}
@@ -94,24 +116,27 @@ export default function RegisterPage() {
       <section className="min-h-[760px] flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-[420px] bg-white rounded-[22px] shadow-sm px-12 py-12">
           <div className="text-center">
-            <h1 className="text-[22px] font-bold">
-              Create your account
-            </h1>
+            <h1 className="text-[22px] font-bold">Create your account</h1>
 
             <p className="mt-3 text-[14px] font-semibold text-gray-500">
               Start your fitness journey today.
             </p>
           </div>
 
+          {/* Google Register Button */}
           <button
             type="button"
             onClick={handleGoogleRegister}
-            className="mt-9 w-full h-[46px] border border-gray-300 rounded-lg flex items-center justify-center gap-3 text-[14px] font-semibold hover:bg-gray-50"
+            className="mt-9 w-full h-[46px] border border-gray-300 rounded-lg flex items-center justify-center gap-3 text-[14px] font-semibold text-gray-700 bg-white hover:bg-gray-50"
           >
-            <span className="text-[20px] font-bold">
-              <span className="text-blue-500">G</span>
-            </span>
-            Continue with Google
+            <Image
+              src="/images/google.png"
+              alt="Google"
+              width={28}
+              height={28}
+              className="object-contain"
+            />
+            <span>Continue with Google</span>
           </button>
 
           <div className="flex items-center gap-4 my-8">
@@ -125,27 +150,47 @@ export default function RegisterPage() {
             <div className="mb-7">
               <label className="block text-[14px] font-bold mb-3">
                 Create Account As
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setRole("client"); setFullName(""); setEmail(""); setPassword(""); setEmailError(""); }}
-                    className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
-                      ${role === "client" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
-                  >
-                    <UserIcon />
-                    Client
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRole("fitness_professional"); setFullName(""); setEmail(""); setPassword(""); setEmailError(""); }}
-                    className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors 
-                      ${role === "fitness_professional" ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
-                  >
-                    <FitnessIcon />
-                    Fitness Professional
-                  </button>
-                  </div>
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRole("client");
+                    setFullName("");
+                    setEmail("");
+                    setPassword("");
+                    setEmailError("");
+                  }}
+                  className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors ${
+                    role === "client"
+                      ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <UserIcon />
+                  Client
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRole("fitness_professional");
+                    setFullName("");
+                    setEmail("");
+                    setPassword("");
+                    setEmailError("");
+                  }}
+                  className={`h-[64px] rounded-lg border-2 flex flex-col items-center justify-center gap-1 text-[13px] font-semibold transition-colors ${
+                    role === "fitness_professional"
+                      ? "border-[#6c5cff] bg-[#f0eeff] text-[#6c5cff]"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <FitnessIcon />
+                  Fitness Professional
+                </button>
+              </div>
             </div>
 
             {/* Full Name */}
@@ -162,6 +207,7 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
                   placeholder="Enter your full name"
+                  required
                   className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
                 />
               </div>
@@ -181,14 +227,13 @@ export default function RegisterPage() {
                   value={email}
                   onChange={handleEmailChange}
                   placeholder="Enter your email"
+                  required
                   className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
                 />
               </div>
 
               {emailError !== "" && (
-                <p className="mt-2 text-[12px] text-red-500">
-                  {emailError}
-                </p>
+                <p className="mt-2 text-[12px] text-red-500">{emailError}</p>
               )}
             </div>
 
@@ -206,6 +251,8 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Create a password"
+                  required
+                  minLength={8}
                   className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
                 />
 
@@ -294,8 +341,6 @@ export default function RegisterPage() {
   );
 }
 
-
-
 function UserIcon() {
   return (
     <svg
@@ -381,11 +426,11 @@ function FitnessIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M6.5 6.5h11"/>
-      <path d="M6.5 17.5h11"/>
-      <path d="M3 9.5h2.5v5H3z"/>
-      <path d="M18.5 9.5H21v5h-2.5z"/>
-      <path d="M5.5 12h13"/>
+      <path d="M6.5 6.5h11" />
+      <path d="M6.5 17.5h11" />
+      <path d="M3 9.5h2.5v5H3z" />
+      <path d="M18.5 9.5H21v5h-2.5z" />
+      <path d="M5.5 12h13" />
     </svg>
   );
 }
