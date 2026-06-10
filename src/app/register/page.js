@@ -55,6 +55,9 @@ export default function RegisterPage() {
       return;
     }
 
+    const redirectPath =
+      role === "fitness_professional" ? "/fitness-profile" : "/welcome";
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -63,7 +66,7 @@ export default function RegisterPage() {
           full_name: fullName,
           role: role,
         },
-        emailRedirectTo: `${window.location.origin}/welcome`,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
 
@@ -76,10 +79,13 @@ export default function RegisterPage() {
   }
 
   async function handleGoogleRegister() {
+    const redirectPath =
+      role === "fitness_professional" ? "/fitness-profile" : "/welcome";
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
 
