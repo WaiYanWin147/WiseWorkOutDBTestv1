@@ -3,24 +3,224 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+
   const [allowed, setAllowed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedRange, setSelectedRange] = useState("7");
+
+  const [dashboardData, setDashboardData] = useState({
+    totalUsers: 0,
+    approvedPros: 0,
+    pendingProApps: 0,
+    priorityUsers: 0,
+    freeUsers: 0,
+    fitnessPros: 0,
+    signupsByDay: [0, 0, 0, 0, 0, 0, 0],
+    hasSignupDate: true,
+  });
 
   useEffect(() => {
     const isAdminLoggedIn = localStorage.getItem("adminLoggedIn");
 
     if (isAdminLoggedIn !== "true") {
       router.replace("/admin/login");
-    } else {
-      setAllowed(true);
+      return;
     }
-  }, [router]);
+
+    setAllowed(true);
+    fetchDashboardData();
+  }, [router, selectedRange]);
+
+  async function fetchCount(query) {
+    const { count, error } = await query;
+
+    if (error) {
+      console.error("Supabase count error:", error.message);
+      return 0;
+    }
+
+    return count || 0;
+  }
+
+  async function fetchDashboardData() {
+    setLoading(true);
+
+    const [
+      totalUsers,
+      approvedPros,
+      pendingProApps,
+      priorityUsers,
+      freeUsers,
+      fitnessPros,
+      signupResult,
+    ] = await Promise.all([
+      fetchCount(
+        supabase.from("profiles").select("*", {
+          count: "exact",
+          head: true,
+        })
+      ),
+
+      fetchCount(
+        supabase
+          .from("profiles")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_type", "Fitness professional")
+          .eq("approved", true)
+      ),
+
+      fetchCount(
+        supabase
+          .from("profiles")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_type", "Fitness professional")
+          .or("approved.eq.false,approved.is.null")
+      ),
+
+      fetchCount(
+        supabase
+          .from("profiles")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_type", "Priority")
+      ),
+
+      fetchCount(
+        supabase
+          .from("profiles")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_type", "Free")
+      ),
+
+      fetchCount(
+        supabase
+          .from("profiles")
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_type", "Fitness professional")
+      ),
+
+      fetchNewSignups(),
+    ]);
+
+    setDashboardData({
+      totalUsers,
+      approvedPros,
+      pendingProApps,
+      priorityUsers,
+      freeUsers,
+      fitnessPros,
+      signupsByDay: signupResult.signupsByDay,
+      hasSignupDate: signupResult.hasSignupDate,
+    });
+
+    setLoading(false);
+  }
+
+  async function fetchNewSignups() {
+    const rangeDays = Number(selectedRange);
+    const today = new Date();
+
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - rangeDays + 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("created_at")
+      .gte("created_at", startDate.toISOString());
+
+    if (error) {
+      console.warn(
+        "New Signups chart needs created_at column:",
+        error.message
+      );
+
+      return {
+        signupsByDay: [0, 0, 0, 0, 0, 0, 0],
+        hasSignupDate: false,
+      };
+    }
+
+    const bucketCount = 7;
+    const bucketSize = Math.ceil(rangeDays / bucketCount);
+    const result = [0, 0, 0, 0, 0, 0, 0];
+
+    data.forEach((user) => {
+      if (!user.created_at) return;
+
+      const createdDate = new Date(user.created_at);
+      createdDate.setHours(0, 0, 0, 0);
+
+      const diffTime = createdDate.getTime() - startDate.getTime();
+      const diffDay = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDay >= 0 && diffDay < rangeDays) {
+        const bucketIndex = Math.min(
+          Math.floor(diffDay / bucketSize),
+          bucketCount - 1
+        );
+
+        result[bucketIndex] += 1;
+      }
+    });
+
+    return {
+      signupsByDay: result,
+      hasSignupDate: true,
+    };
+  }
 
   if (!allowed) {
     return null;
   }
+
+  const totalTier =
+    dashboardData.freeUsers +
+    dashboardData.priorityUsers +
+    dashboardData.fitnessPros;
+
+  const freePercent =
+    totalTier === 0
+      ? 0
+      : Math.round((dashboardData.freeUsers / totalTier) * 100);
+
+  const priorityPercent =
+    totalTier === 0
+      ? 0
+      : Math.round((dashboardData.priorityUsers / totalTier) * 100);
+
+  const proPercent =
+    totalTier === 0 ? 0 : 100 - freePercent - priorityPercent;
+
+  const pieBackground =
+    totalTier === 0
+      ? "#e5e5e5"
+      : `conic-gradient(
+          #2d7fb8 0% ${freePercent}%,
+          #ff9800 ${freePercent}% ${freePercent + priorityPercent}%,
+          #2ca02c ${freePercent + priorityPercent}% 100%
+        )`;
+
+  const signupPoints = getSignupChartPoints(dashboardData.signupsByDay);
+  const signupPolyline = signupPoints.map(([x, y]) => `${x},${y}`).join(" ");
 
   return (
     <main style={styles.page}>
@@ -28,29 +228,47 @@ export default function AdminDashboardPage() {
 
       <section style={styles.content}>
         <div style={styles.topBar}>
-          <select style={styles.select}>
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Last 90 days</option>
+          <select
+            value={selectedRange}
+            onChange={(event) => setSelectedRange(event.target.value)}
+            style={styles.select}
+          >
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
           </select>
         </div>
 
         <div style={styles.statsGrid}>
-          <StatCard title="Total Users" value="1,234" />
-          <StatCard title="Approved Pros" value="86" />
+          <StatCard
+            title="Total Users"
+            value={loading ? "Loading..." : formatNumber(dashboardData.totalUsers)}
+          />
+
+          <StatCard
+            title="Approved Pros"
+            value={loading ? "Loading..." : formatNumber(dashboardData.approvedPros)}
+          />
 
           <div style={styles.statCard}>
             <div style={styles.cardHeader}>
               <h3 style={styles.statTitle}>Pending Pro Apps</h3>
-              <span style={styles.redDot}></span>
+              {dashboardData.pendingProApps > 0 && (
+                <span style={styles.redDot}></span>
+              )}
             </div>
 
-            <p style={styles.statValue}>7</p>
+            <p style={styles.statValue}>
+              {loading ? "Loading..." : formatNumber(dashboardData.pendingProApps)}
+            </p>
 
             <button style={styles.reviewButton}>Review</button>
           </div>
 
-          <StatCard title="Priority Users" value="234" />
+          <StatCard
+            title="Priority Users"
+            value={loading ? "Loading..." : formatNumber(dashboardData.priorityUsers)}
+          />
         </div>
 
         <div style={styles.chartGrid}>
@@ -58,16 +276,30 @@ export default function AdminDashboardPage() {
             <h3 style={styles.chartTitle}>User Tier Breakdown</h3>
 
             <div style={styles.pieArea}>
-              <div style={styles.pieChart}>
-                <span style={styles.pieLabelFree}>64%</span>
-                <span style={styles.pieLabelPriority}>24%</span>
-                <span style={styles.pieLabelPro}>12%</span>
+              <div
+                style={{
+                  ...styles.pieChart,
+                  background: pieBackground,
+                }}
+              >
+                <span style={styles.pieLabelFree}>{freePercent}%</span>
+                <span style={styles.pieLabelPriority}>{priorityPercent}%</span>
+                <span style={styles.pieLabelPro}>{proPercent}%</span>
               </div>
 
               <div style={styles.legend}>
-                <Legend color="#2d7fb8" label="Free" />
-                <Legend color="#ff9800" label="Priority" />
-                <Legend color="#2ca02c" label="Pro" />
+                <Legend
+                  color="#2d7fb8"
+                  label={`Free (${dashboardData.freeUsers})`}
+                />
+                <Legend
+                  color="#ff9800"
+                  label={`Priority (${dashboardData.priorityUsers})`}
+                />
+                <Legend
+                  color="#2ca02c"
+                  label={`Pro (${dashboardData.fitnessPros})`}
+                />
               </div>
             </div>
           </div>
@@ -112,38 +344,59 @@ export default function AdminDashboardPage() {
                 strokeDasharray="6 5"
               />
 
-              <polyline
-                points="50,140 110,110 170,170 230,140 290,60 350,110 410,90"
-                fill="none"
-                stroke="#1683d8"
-                strokeWidth="3"
-              />
+              {dashboardData.hasSignupDate ? (
+                <>
+                  <polyline
+                    points={signupPolyline}
+                    fill="none"
+                    stroke="#1683d8"
+                    strokeWidth="3"
+                  />
 
-              {[
-                [50, 140],
-                [110, 110],
-                [170, 170],
-                [230, 140],
-                [290, 60],
-                [350, 110],
-                [410, 90],
-              ].map(([x, y], index) => (
-                <circle
-                  key={index}
-                  cx={x}
-                  cy={y}
-                  r="6"
-                  fill="#5dade2"
-                  stroke="#1683d8"
-                  strokeWidth="2"
-                />
-              ))}
+                  {signupPoints.map(([x, y], index) => (
+                    <circle
+                      key={index}
+                      cx={x}
+                      cy={y}
+                      r="6"
+                      fill="#5dade2"
+                      stroke="#1683d8"
+                      strokeWidth="2"
+                    />
+                  ))}
+                </>
+              ) : (
+                <text
+                  x="230"
+                  y="135"
+                  textAnchor="middle"
+                  fontSize="15"
+                  fontWeight="700"
+                  fill="#777777"
+                >
+                  Add created_at column to show signup trend
+                </text>
+              )}
             </svg>
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function getSignupChartPoints(signupsByDay) {
+  const xPositions = [50, 110, 170, 230, 290, 350, 410];
+  const maxValue = Math.max(...signupsByDay, 1);
+
+  return signupsByDay.map((value, index) => {
+    const y = 220 - (value / maxValue) * 160;
+    return [xPositions[index], y];
+  });
+}
+
+function formatNumber(value) {
+  return Number(value).toLocaleString();
 }
 
 function StatCard({ title, value }) {
@@ -285,8 +538,6 @@ const styles = {
     width: "230px",
     height: "230px",
     borderRadius: "50%",
-    background:
-      "conic-gradient(#2d7fb8 0% 64%, #ff9800 64% 88%, #2ca02c 88% 100%)",
     position: "relative",
   },
 

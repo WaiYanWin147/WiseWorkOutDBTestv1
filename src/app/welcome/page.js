@@ -1,6 +1,65 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function WelcomePage() {
+  useEffect(() => {
+    completeGoogleProfile();
+  }, []);
+
+  async function completeGoogleProfile() {
+    const databaseRole = localStorage.getItem("googleRegisterRole");
+
+    if (!databaseRole) {
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      console.error("Google user error:", userError?.message);
+      return;
+    }
+
+    const user = userData.user;
+
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split("@")[0] ||
+      "User";
+
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        full_name: fullName,
+        email: user.email,
+        user_type: "Free",
+        status: "active",
+        approved: true,
+      },
+      {
+        onConflict: "id",
+      }
+    );
+
+    if (profileError) {
+      console.error("Profile save error:", profileError.message);
+      return;
+    }
+
+    await supabase.auth.updateUser({
+      data: {
+        full_name: fullName,
+        role: "Free",
+      },
+    });
+
+    localStorage.removeItem("googleRegisterRole");
+  }
+
   return (
     <main className="min-h-screen bg-[#f8f8ff] text-black">
       {/* Navbar */}

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function FitnessProfilePage() {
   const router = useRouter();
@@ -13,7 +14,64 @@ export default function FitnessProfilePage() {
   const [specializations, setSpecializations] = useState("");
   const [certificate, setCertificate] = useState(null);
 
-  function handleSubmit(event) {
+  useEffect(() => {
+    completeGoogleProfile();
+  }, []);
+
+  async function completeGoogleProfile() {
+    const databaseRole = localStorage.getItem("googleRegisterRole");
+
+    if (!databaseRole) {
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      console.error("Google user error:", userError?.message);
+      return;
+    }
+
+    const user = userData.user;
+
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split("@")[0] ||
+      "User";
+
+    setDisplayName(fullName);
+
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        full_name: fullName,
+        email: user.email,
+        user_type: "Fitness professional",
+        status: "active",
+        approved: false,
+      },
+      {
+        onConflict: "id",
+      }
+    );
+
+    if (profileError) {
+      console.error("Profile save error:", profileError.message);
+      return;
+    }
+
+    await supabase.auth.updateUser({
+      data: {
+        full_name: fullName,
+        role: "Fitness professional",
+      },
+    });
+
+    localStorage.removeItem("googleRegisterRole");
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!displayName.trim()) {
@@ -35,6 +93,38 @@ export default function FitnessProfilePage() {
       alert("Please upload your certification.");
       return;
     }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert("Please login again before submitting your application.");
+      router.push("/register");
+      return;
+    }
+
+    const user = userData.user;
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        full_name: displayName,
+        user_type: "Fitness professional",
+        status: "active",
+        approved: false,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      alert(profileError.message);
+      return;
+    }
+
+    await supabase.auth.updateUser({
+      data: {
+        full_name: displayName,
+        role: "Fitness professional",
+      },
+    });
 
     router.push("/application-submitted");
   }
@@ -65,8 +155,9 @@ export default function FitnessProfilePage() {
 
       {/* Form Section */}
       <section className="min-h-[760px] flex items-center justify-center px-6 py-16">
-        <div className="bg-white rounded-[22px] shadow-sm px-8 py-9"
-              style={{ width: "440px", maxWidth: "calc(100vw - 48px)" }}
+        <div
+          className="bg-white rounded-[22px] shadow-sm px-8 py-9"
+          style={{ width: "440px", maxWidth: "calc(100vw - 48px)" }}
         >
           <h1 className="text-[26px] font-bold">Complete your profile</h1>
 

@@ -58,13 +58,16 @@ export default function RegisterPage() {
     const redirectPath =
       role === "fitness_professional" ? "/fitness-profile" : "/welcome";
 
+    const databaseRole =
+      role === "fitness_professional" ? "Fitness professional" : "Free";
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role: role,
+          role: databaseRole,
         },
         emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
@@ -82,6 +85,11 @@ export default function RegisterPage() {
     const redirectPath =
       role === "fitness_professional" ? "/fitness-profile" : "/welcome";
 
+    const databaseRole =
+      role === "fitness_professional" ? "Fitness professional" : "Free";
+
+    localStorage.setItem("googleRegisterRole", databaseRole);
+  
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -262,7 +270,7 @@ export default function RegisterPage() {
                   className="w-full outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
                 />
 
-                <EyeIcon />
+              
               </div>
 
               <div className="mt-2 flex items-center gap-2 text-[12px] text-gray-500">
@@ -401,24 +409,7 @@ function LockIcon() {
   );
 }
 
-function EyeIcon() {
-  return (
-    <svg
-      width="19"
-      height="19"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#9ca3af"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-      <path d="m3 3 18 18" />
-    </svg>
-  );
-}
+
 
 function FitnessIcon() {
   return (
