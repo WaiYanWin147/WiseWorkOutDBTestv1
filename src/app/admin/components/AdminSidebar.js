@@ -103,7 +103,16 @@ export default function AdminSidebar() {
         <div style={styles.sectionTitle}>CONTENT</div>
 
         <nav style={styles.nav}>
-          <div style={styles.navItem}>Website</div>
+          <Link href="/admin/website" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/website") ? styles.activeNavItem : {}),
+              }}
+            >
+              Website
+            </div>
+          </Link>
         </nav>
 
         <div style={styles.divider}></div>

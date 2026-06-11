@@ -1,7 +1,204 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+const defaultHero = {
+  titleLine1: "Train smarter.",
+  titleLine2: "See real results.",
+  subtitle:
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do dolor sit tincidunt ut labore et dolore magna aliqua. Dolor sit amet, consectetur adipiscing elit.",
+};
+
+const defaultFeatures = {
+  sectionLabel: "Features",
+  title: "Everything to crush your goals",
+  items: [
+    {
+      title: "Personalised Plans",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+    {
+      title: "Workout Tracking",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+    {
+      title: "Progress Analytics",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+    {
+      title: "Nutrition Support",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+    {
+      title: "Streaks & Rewards",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+    {
+      title: "Community Support",
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+    },
+  ],
+};
+
+const defaultSubscription = {
+  sectionLabel: "Subscription Plans",
+  title: "Unlock Your Best Self",
+  plans: [
+    {
+      title: "Free",
+      price: "$0",
+      description:
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+      features: [
+        "Basic workouts",
+        "Workout tracking",
+        "Community Access",
+        "Workout tracking",
+      ],
+    },
+    {
+      title: "Premium",
+      price: "$7.99",
+      description:
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.",
+      features: [
+        "Workout tracking",
+        "Basic workouts",
+        "Workout tracking",
+        "Basic workouts",
+        "Workout tracking",
+        "Basic workouts",
+      ],
+    },
+  ],
+};
+
+const defaultFaq = {
+  title: "FAQs",
+  items: [
+    {
+      question: "Is ShapeRush free to use?",
+      answer: "Yes, ShapeRush provides a free plan for users.",
+    },
+    {
+      question: "Can I track weight, workout, or intermittent fasting?",
+      answer: "Yes, users can track their fitness progress inside the app.",
+    },
+    {
+      question: "What do I need to get started?",
+      answer: "Create an account and download the ShapeRush app.",
+    },
+  ],
+};
+
+const defaultReview = {
+  reviewer_name: "Luke H.",
+  rating: 5,
+  feedback:
+    "This app is like having a personal trainer with you 24/7. The guided workouts are clear and easy to follow, and the progress tracking keeps me accountable.",
+};
+
+const featureIcons = [
+  "/images/icon-personalized.png",
+  "/images/icon-workout.png",
+  "/images/icon-progress.png",
+  "/images/icon-nutrition.png",
+  "/images/icon-rewards.png",
+  "/images/icon-community.png",
+];
 
 export default function HomePage() {
+  const [hero, setHero] = useState(defaultHero);
+  const [features, setFeatures] = useState(defaultFeatures);
+  const [subscription, setSubscription] = useState(defaultSubscription);
+  const [faq, setFaq] = useState(defaultFaq);
+  const [featuredReviews, setFeaturedReviews] = useState([]);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+
+  useEffect(() => {
+    fetchWebsiteContent();
+    fetchFeaturedReviews();
+  }, []);
+
+  useEffect(() => {
+    setCurrentReviewIndex(0);
+  }, [featuredReviews.length]);
+
+  useEffect(() => {
+    if (featuredReviews.length <= 1) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCurrentReviewIndex((currentIndex) =>
+        currentIndex === featuredReviews.length - 1 ? 0 : currentIndex + 1
+      );
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [featuredReviews.length]);
+
+  async function fetchWebsiteContent() {
+    const { data, error } = await supabase
+      .from("website_content")
+      .select("section_key, content");
+
+    if (error) {
+      console.error("Fetch website content error:", error.message);
+      return;
+    }
+
+    const contentMap = {};
+
+    (data || []).forEach((item) => {
+      contentMap[item.section_key] = item.content;
+    });
+
+    setHero(contentMap.hero || defaultHero);
+    setFeatures(contentMap.features || defaultFeatures);
+    setSubscription(contentMap.subscription || defaultSubscription);
+    setFaq(contentMap.faq || defaultFaq);
+  }
+
+  async function fetchFeaturedReviews() {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select(
+        "id, reviewer_name, rating, feedback, submitted_at, featured_on_website"
+      )
+      .eq("featured_on_website", true)
+      .order("submitted_at", { ascending: false })
+      .limit(6);
+
+    if (error) {
+      console.error("Fetch featured reviews error:", error.message);
+      return;
+    }
+
+    setFeaturedReviews(data || []);
+  }
+
+  const testimonialReviews =
+    featuredReviews.length > 0 ? featuredReviews : [defaultReview];
+
+  const mainReview =
+    testimonialReviews[currentReviewIndex] || testimonialReviews[0];
+
+  function goToPreviousReview() {
+    setCurrentReviewIndex((currentIndex) =>
+      currentIndex === 0 ? testimonialReviews.length - 1 : currentIndex - 1
+    );
+  }
+
+  function goToNextReview() {
+    setCurrentReviewIndex((currentIndex) =>
+      currentIndex === testimonialReviews.length - 1 ? 0 : currentIndex + 1
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f7ff] text-black">
       {/* Navbar */}
@@ -32,15 +229,15 @@ export default function HomePage() {
         <div className="w-full px-10 md:px-24 grid grid-cols-1 md:grid-cols-2 items-center gap-10">
           <div>
             <h2 className="text-[48px] md:text-[54px] leading-[1.05] font-bold">
-              Train smarter.
+              {hero.titleLine1 || defaultHero.titleLine1}
               <br />
-              <span className="text-[#7c83e9]">See real results.</span>
+              <span className="text-[#7c83e9]">
+                {hero.titleLine2 || defaultHero.titleLine2}
+              </span>
             </h2>
 
             <p className="mt-6 text-[14px] leading-6 text-gray-500 max-w-[430px]">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              dolor sit tincidunt ut labore et dolore magna aliqua. Dolor sit
-              amet, consectetur adipiscing elit.
+              {hero.subtitle || defaultHero.subtitle}
             </p>
 
             <Link
@@ -98,43 +295,22 @@ export default function HomePage() {
 
         <div>
           <p className="text-[#6c5cff] text-[13px] font-semibold uppercase">
-            Features
+            {features.sectionLabel || "Features"}
           </p>
 
           <h2 className="text-[24px] font-bold mt-2">
-            Everything to crush your goals
+            {features.title || defaultFeatures.title}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-12 gap-y-12 mt-10">
-            <Feature
-              icon="/images/icon-personalized.png"
-              title="Personalised Plans"
-            />
-
-            <Feature
-              icon="/images/icon-workout.png"
-              title="Workout Tracking"
-            />
-
-            <Feature
-              icon="/images/icon-progress.png"
-              title="Progress Analytics"
-            />
-
-            <Feature
-              icon="/images/icon-nutrition.png"
-              title="Nutrition Support"
-            />
-
-            <Feature
-              icon="/images/icon-rewards.png"
-              title="Streaks & Rewards"
-            />
-
-            <Feature
-              icon="/images/icon-community.png"
-              title="Community Support"
-            />
+            {(features.items || defaultFeatures.items).map((item, index) => (
+              <Feature
+                key={index}
+                icon={featureIcons[index] || featureIcons[0]}
+                title={item.title}
+                text={item.text}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -150,16 +326,26 @@ export default function HomePage() {
 
         <div className="relative z-10 text-center">
           <p className="text-[#6c5cff] text-[13px] font-semibold uppercase">
-            Subscription Plans
+            {subscription.sectionLabel || "Subscription Plans"}
           </p>
 
           <h2 className="text-[24px] font-bold mt-2">
-            Unlock Your Best Self
+            {subscription.title || defaultSubscription.title}
           </h2>
 
           <div className="mt-12 flex flex-col md:flex-row justify-center gap-8">
-            <PlanCard title="Free" price="$0" />
-            <PlanCard title="Premium" price="$7.99" premium />
+            {(subscription.plans || defaultSubscription.plans).map(
+              (plan, index) => (
+                <PlanCard
+                  key={index}
+                  title={plan.title}
+                  price={plan.price}
+                  description={plan.description}
+                  features={plan.features}
+                  premium={index === 1}
+                />
+              )
+            )}
           </div>
         </div>
       </section>
@@ -175,28 +361,55 @@ export default function HomePage() {
 
           <div className="text-center px-10">
             <p className="text-[#6c5cff] text-[13px] font-semibold uppercase">
-              Testimonials
+              TESTIMONIALS
             </p>
 
             <h2 className="text-[24px] font-bold mt-2">What Users Say</h2>
 
-            <p className="mt-8 text-[16px] leading-7">
-              “This app is like having a personal trainer with you 24/7. The
-              guided workouts are clear and easy to follow, and the progress
-              tracking keeps me accountable. I&apos;ve never felt more in
-              control of my fitness journey. Highly recommend!”
+            <p className="mt-8 text-[16px] leading-7 min-h-[70px]">
+              “{mainReview?.feedback || defaultReview.feedback}”
             </p>
 
-            <p className="mt-6 text-gray-400">Luke H.</p>
+            <p className="mt-6 text-gray-400">
+              {mainReview?.reviewer_name || defaultReview.reviewer_name}
+            </p>
 
-            <p className="text-yellow-400 text-[22px] mt-2">★ ★ ★ ★ ★</p>
+            <p className="text-yellow-400 text-[28px] mt-2">
+              {renderStars(mainReview?.rating || defaultReview.rating)}
+            </p>
 
-            <div className="flex justify-center gap-3 mt-8">
-              <span className="w-5 h-2 bg-[#6c5cff] rounded-full" />
-              <span className="w-2 h-2 bg-gray-300 rounded-full" />
-              <span className="w-2 h-2 bg-gray-300 rounded-full" />
-              <span className="w-2 h-2 bg-gray-300 rounded-full" />
-              <span className="w-2 h-2 bg-gray-300 rounded-full" />
+            <div className="flex justify-center items-center gap-3 mt-8">
+              <button
+                type="button"
+                onClick={goToPreviousReview}
+                className="text-[#6c5cff] text-[24px] font-bold px-2"
+                aria-label="Previous review"
+              >
+                ‹
+              </button>
+
+              {testimonialReviews.slice(0, 6).map((review, index) => (
+                <button
+                  key={review.id || index}
+                  type="button"
+                  onClick={() => setCurrentReviewIndex(index)}
+                  className={
+                    index === currentReviewIndex
+                      ? "w-5 h-2 bg-[#6c5cff] rounded-full"
+                      : "w-2 h-2 bg-gray-300 rounded-full"
+                  }
+                  aria-label={`Show review ${index + 1}`}
+                />
+              ))}
+
+              <button
+                type="button"
+                onClick={goToNextReview}
+                className="text-[#6c5cff] text-[24px] font-bold px-2"
+                aria-label="Next review"
+              >
+                ›
+              </button>
             </div>
           </div>
 
@@ -210,11 +423,17 @@ export default function HomePage() {
 
       {/* FAQ */}
       <section id="faq" className="bg-[#f8f8ff] px-10 md:px-64 py-24">
-        <h2 className="text-[28px] font-bold mb-8">FAQs</h2>
+        <h2 className="text-[28px] font-bold mb-8">
+          {faq.title || defaultFaq.title}
+        </h2>
 
-        <FAQItem question="Is ShapeRush free to use?" />
-        <FAQItem question="Can I track weight, workout, or intermittent fasting?" />
-        <FAQItem question="What do I need to get started?" />
+        {(faq.items || defaultFaq.items).map((item, index) => (
+          <FAQItem
+            key={index}
+            question={item.question}
+            answer={item.answer}
+          />
+        ))}
       </section>
 
       {/* Footer */}
@@ -256,23 +475,26 @@ export default function HomePage() {
   );
 }
 
-function Feature({ icon, title }) {
+function Feature({ icon, title, text }) {
   return (
     <div>
       <div className="relative w-8 h-8">
-        <Image src={icon} alt={title} fill className="object-contain" />
+        <Image
+          src={icon}
+          alt={title || "Feature"}
+          fill
+          className="object-contain"
+        />
       </div>
 
       <h3 className="mt-4 text-[14px] font-bold">{title}</h3>
 
-      <p className="mt-2 text-[12px] leading-4 text-gray-500">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.
-      </p>
+      <p className="mt-2 text-[12px] leading-4 text-gray-500">{text}</p>
     </div>
   );
 }
 
-function PlanCard({ title, price, premium }) {
+function PlanCard({ title, price, description, features, premium }) {
   return (
     <div
       className={`w-[310px] min-h-[390px] bg-white rounded-[22px] p-8 text-left ${
@@ -282,7 +504,7 @@ function PlanCard({ title, price, premium }) {
       <h3 className="text-[22px] font-bold">{title}</h3>
 
       <p className="mt-3 text-[12px] leading-5 text-gray-500">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.
+        {description}
       </p>
 
       <div className="mt-10 flex items-end">
@@ -293,23 +515,17 @@ function PlanCard({ title, price, premium }) {
       <div className="h-px bg-gray-200 my-5" />
 
       <ul className="space-y-4 text-[13px]">
-        <PlanItem text="Basic workouts" />
-        <PlanItem text="Workout tracking" />
-        <PlanItem text="Community Access" />
-        <PlanItem text="Workout tracking" />
-
-        {premium && (
-          <>
-            <PlanItem text="Workout tracking" />
-            <PlanItem text="Basic workouts" />
-          </>
-        )}
+        {(features || []).map((feature, index) => (
+          <PlanItem key={index} text={feature} />
+        ))}
       </ul>
     </div>
   );
 }
 
 function PlanItem({ text }) {
+  if (!text) return null;
+
   return (
     <li className="text-[#6c5cff]">
       ✓ <span className="text-black ml-2">{text}</span>
@@ -330,12 +546,18 @@ function PersonCard({ image }) {
   );
 }
 
-function FAQItem({ question }) {
+function FAQItem({ question, answer }) {
   return (
-    <div className="border-b border-gray-200 py-5 flex items-center justify-between">
-      <p className="text-[15px]">{question}</p>
-      <span className="text-[#6c5cff] text-2xl">+</span>
-    </div>
+    <details className="border-b border-gray-200 py-5">
+      <summary className="flex items-center justify-between cursor-pointer list-none">
+        <p className="text-[15px]">{question}</p>
+        <span className="text-[#6c5cff] text-2xl">+</span>
+      </summary>
+
+      {answer && (
+        <p className="mt-4 text-[14px] leading-6 text-gray-500">{answer}</p>
+      )}
+    </details>
   );
 }
 
@@ -351,4 +573,10 @@ function FooterColumn({ title, lines }) {
       </div>
     </div>
   );
+}
+
+function renderStars(rating) {
+  const value = Math.max(0, Math.min(5, Number(rating || 0)));
+
+  return "★ ".repeat(value) + "☆ ".repeat(5 - value);
 }
