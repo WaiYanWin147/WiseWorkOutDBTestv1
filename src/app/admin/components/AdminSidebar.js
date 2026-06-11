@@ -18,7 +18,7 @@ export default function AdminSidebar() {
 
   return (
     <aside style={styles.sidebar}>
-      <div>
+      <div style={styles.menuArea}>
         <h1 style={styles.logo}>ShapeRush</h1>
 
         <div style={styles.sectionTitle}>MANAGE</div>
@@ -46,8 +46,30 @@ export default function AdminSidebar() {
             </div>
           </Link>
 
-          <div style={styles.navItem}>Professionals</div>
-          <div style={styles.navItem}>Plans</div>
+          <Link href="/admin/professionals" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/professionals")
+                  ? styles.activeNavItem
+                  : {}),
+              }}
+            >
+              Professionals
+            </div>
+          </Link>
+
+          <Link href="/admin/plans" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/plans") ? styles.activeNavItem : {}),
+              }}
+            >
+              Plans
+            </div>
+          </Link>
+          
           <div style={styles.navItem}>Reviews</div>
           <div style={styles.navItem}>Reports</div>
         </nav>
@@ -55,6 +77,7 @@ export default function AdminSidebar() {
         <div style={styles.divider}></div>
 
         <div style={styles.sectionTitle}>CONTENT</div>
+
         <nav style={styles.nav}>
           <div style={styles.navItem}>Website</div>
         </nav>
@@ -62,6 +85,7 @@ export default function AdminSidebar() {
         <div style={styles.divider}></div>
 
         <div style={styles.sectionTitle}>SYSTEM</div>
+
         <nav style={styles.nav}>
           <div style={styles.navItem}>Audit Logs</div>
         </nav>
@@ -77,13 +101,19 @@ export default function AdminSidebar() {
 const styles = {
   sidebar: {
     width: "280px",
+    height: "100vh",
+    minHeight: "100vh",
     backgroundColor: "#ffffff",
     padding: "36px 30px 26px",
     boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    minHeight: "100vh",
+    position: "sticky",
+    top: 0,
+    flexShrink: 0,
+    overflow: "hidden",
+  },
+
+  menuArea: {
+    paddingBottom: "110px",
   },
 
   logo: {
@@ -127,6 +157,9 @@ const styles = {
   },
 
   logoutButton: {
+    position: "absolute",
+    left: "30px",
+    bottom: "26px",
     width: "190px",
     height: "60px",
     borderRadius: "18px",

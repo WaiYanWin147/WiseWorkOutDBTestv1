@@ -3,105 +3,114 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminUsersPage() {
   const router = useRouter();
+
   const [allowed, setAllowed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [tierFilter, setTierFilter] = useState("All Tier");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [searchKeyword, setSearchKeyword] = useState("");
 
-  const users = [
-    {
-      id: "1044",
-      name: "Wade Warren",
-      email: "example123@gmail.com",
-      tier: "Free",
-      status: "Active",
-    },
-    {
-      id: "1045",
-      name: "Anna Tan",
-      email: "anna@gmail.com",
-      tier: "Free",
-      status: "Active",
-    },
-    {
-      id: "1046",
-      name: "Becky Winsons",
-      email: "becky@gmail.com",
-      tier: "Free",
-      status: "Suspended",
-    },
-    {
-      id: "1047",
-      name: "Alissa Mackie",
-      email: "alissa@gmail.com",
-      tier: "Free",
-      status: "Active",
-    },
-    {
-      id: "1048",
-      name: "Daniel Lee",
-      email: "daniel@gmail.com",
-      tier: "Priority",
-      status: "Active",
-    },
-    {
-      id: "1049",
-      name: "Sophia Lim",
-      email: "sophia@gmail.com",
-      tier: "Priority",
-      status: "Active",
-    },
-    {
-      id: "1050",
-      name: "Jason Wong",
-      email: "jason@gmail.com",
-      tier: "Priority",
-      status: "Active",
-    },
-    {
-      id: "1051",
-      name: "Anna Tan",
-      email: "anna2@gmail.com",
-      tier: "Free",
-      status: "Active",
-    },
-    {
-      id: "1052",
-      name: "Becky Tan",
-      email: "beckytan@gmail.com",
-      tier: "Priority",
-      status: "Suspended",
-    },
-  ];
-
-  const filteredUsers = users.filter((user) => {
-    const matchTier = tierFilter === "All Tier" || user.tier === tierFilter;
-    const matchStatus =
-      statusFilter === "All Status" || user.status === statusFilter;
-
-    const keyword = searchKeyword.toLowerCase();
-
-    const matchSearch =
-      user.id.toLowerCase().includes(keyword) ||
-      user.name.toLowerCase().includes(keyword) ||
-      user.email.toLowerCase().includes(keyword);
-
-    return matchTier && matchStatus && matchSearch;
-  });
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const isAdminLoggedIn = localStorage.getItem("adminLoggedIn");
 
     if (isAdminLoggedIn !== "true") {
       router.replace("/admin/login");
-    } else {
-      setAllowed(true);
+      return;
     }
+
+    setAllowed(true);
+    fetchUsers();
   }, [router]);
+
+  async function fetchUsers() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, user_type, status")
+      .in("user_type", ["Free", "Priority"])
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      console.error("Fetch users error:", error.message);
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
+    const formattedUsers = (data || []).map((user) => ({
+      id: user.id,
+      shortId: shortId(user.id),
+      name: user.full_name || "-",
+      email: user.email || "-",
+      tier: user.user_type || "-",
+      status: normalizeStatus(user.status),
+    }));
+
+    setUsers(formattedUsers);
+    setLoading(false);
+  }
+
+  async function handleToggleStatus(user) {
+    const currentStatus = user.status;
+    const nextStatus = currentStatus === "Suspended" ? "active" : "suspended";
+
+    const confirmMessage =
+      currentStatus === "Suspended"
+        ? `Unsuspend ${user.name}?`
+        : `Restrict ${user.name}?`;
+
+    const confirmed = window.confirm(confirmMessage);
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        status: nextStatus,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setUsers((currentUsers) =>
+      currentUsers.map((item) =>
+        item.id === user.id
+          ? {
+              ...item,
+              status: normalizeStatus(nextStatus),
+            }
+          : item
+      )
+    );
+  }
+
+  const filteredUsers = users.filter((user) => {
+    const matchTier = tierFilter === "All Tier" || user.tier === tierFilter;
+
+    const matchStatus =
+      statusFilter === "All Status" || user.status === statusFilter;
+
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    const matchSearch =
+      keyword === "" ||
+      user.shortId.toLowerCase().includes(keyword) ||
+      user.name.toLowerCase().includes(keyword) ||
+      user.email.toLowerCase().includes(keyword);
+
+    return matchTier && matchStatus && matchSearch;
+  });
 
   if (!allowed) {
     return null;
@@ -115,14 +124,17 @@ export default function AdminUsersPage() {
         <div style={styles.tableCard}>
           <div style={styles.topRow}>
             <h2 style={styles.title}>
-              Users <span style={styles.count}>(1,135)</span>
+              Users{" "}
+              <span style={styles.count}>
+                ({loading ? "..." : formatNumber(users.length)})
+              </span>
             </h2>
 
             <div style={styles.filters}>
               <select
                 style={styles.select}
                 value={tierFilter}
-                onChange={(e) => setTierFilter(e.target.value)}
+                onChange={(event) => setTierFilter(event.target.value)}
               >
                 <option>All Tier</option>
                 <option>Free</option>
@@ -132,7 +144,7 @@ export default function AdminUsersPage() {
               <select
                 style={styles.select}
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(event) => setStatusFilter(event.target.value)}
               >
                 <option>All Status</option>
                 <option>Active</option>
@@ -140,12 +152,13 @@ export default function AdminUsersPage() {
               </select>
 
               <div style={styles.searchBox}>
-                <span style={styles.searchIcon}>⌕</span>
+                <SearchIcon />
+
                 <input
                   type="text"
                   placeholder="Search"
                   value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onChange={(event) => setSearchKeyword(event.target.value)}
                   style={styles.searchInput}
                 />
               </div>
@@ -161,10 +174,14 @@ export default function AdminUsersPage() {
             <div style={{ ...styles.cell, flex: 1.2 }}></div>
           </div>
 
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user, index) => (
-              <div key={index} style={styles.tableRow}>
-                <div style={{ ...styles.rowCell, flex: 0.9 }}>{user.id}</div>
+          {loading ? (
+            <div style={styles.emptyMessage}>Loading users...</div>
+          ) : filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <div key={user.id} style={styles.tableRow}>
+                <div style={{ ...styles.rowCell, flex: 0.9 }}>
+                  {user.shortId}
+                </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.7 }}>
                   {user.name}
@@ -198,6 +215,7 @@ export default function AdminUsersPage() {
                   }}
                 >
                   <button
+                    onClick={() => handleToggleStatus(user)}
                     style={
                       user.status === "Suspended"
                         ? styles.unsuspendButton
@@ -215,6 +233,46 @@ export default function AdminUsersPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function shortId(id) {
+  if (!id) return "-";
+  return id.slice(0, 4);
+}
+
+function normalizeStatus(status) {
+  if (!status) return "Active";
+
+  const lowerStatus = status.toLowerCase();
+
+  if (lowerStatus === "suspended") {
+    return "Suspended";
+  }
+
+  return "Active";
+}
+
+function formatNumber(value) {
+  return Number(value).toLocaleString();
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#8f8f8f"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ marginRight: "8px", flexShrink: 0 }}
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
   );
 }
 
@@ -288,13 +346,6 @@ const styles = {
     padding: "0 12px",
     boxSizing: "border-box",
     backgroundColor: "#ffffff",
-  },
-
-  searchIcon: {
-    fontSize: "20px",
-    color: "#8f8f8f",
-    marginRight: "8px",
-    lineHeight: 1,
   },
 
   searchInput: {
