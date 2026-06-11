@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
 import { supabase } from "@/lib/supabase";
+import { createAuditLog } from "@/lib/adminAuditLog";
 
 export default function AdminProfessionalsPage() {
   const router = useRouter();
@@ -106,6 +107,15 @@ export default function AdminProfessionalsPage() {
       alert(error.message);
       return;
     }
+
+    await createAuditLog({
+      action:
+        nextStatus === "suspended"
+          ? "suspend_professional"
+          : "unsuspend_professional",
+      target: professional.id,
+      targetType: "professional",
+    });
 
     setProfessionals((currentProfessionals) =>
       currentProfessionals.map((item) =>

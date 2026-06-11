@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
 import { supabase } from "@/lib/supabase";
+import { createAuditLog } from "@/lib/adminAuditLog";
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -82,6 +83,12 @@ export default function AdminUsersPage() {
       alert(error.message);
       return;
     }
+
+    await createAuditLog({
+      action: nextStatus === "suspended" ? "suspend_user" : "unsuspend_user",
+      target: user.id,
+      targetType: "user",
+    });
 
     setUsers((currentUsers) =>
       currentUsers.map((item) =>

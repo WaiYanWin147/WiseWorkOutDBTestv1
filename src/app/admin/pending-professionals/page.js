@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { createAuditLog } from "@/lib/adminAuditLog";
 
 export default function PendingProfessionalsPage() {
   const router = useRouter();
@@ -69,6 +70,12 @@ export default function PendingProfessionalsPage() {
       return;
     }
 
+    await createAuditLog({
+      action: "approve_pro",
+      target: application.id,
+      targetType: "professional",
+    });
+
     setApplications((current) =>
       current.filter((item) => item.id !== application.id)
     );
@@ -94,6 +101,12 @@ export default function PendingProfessionalsPage() {
       alert(error.message);
       return;
     }
+
+    await createAuditLog({
+      action: "reject_pro",
+      target: application.id,
+      targetType: "professional",
+    });
 
     setApplications((current) =>
       current.filter((item) => item.id !== application.id)

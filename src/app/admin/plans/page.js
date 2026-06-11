@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
 import { supabase } from "@/lib/supabase";
+import { createAuditLog } from "@/lib/adminAuditLog";
 
 export default function AdminPlansPage() {
   const router = useRouter();
@@ -91,6 +92,12 @@ export default function AdminPlansPage() {
       alert(error.message);
       return;
     }
+
+    await createAuditLog({
+      action: nextStatus === "hidden" ? "hide_plan" : "publish_plan",
+      target: plan.id,
+      targetType: "free_plan",
+    });
 
     setFreePlans((currentPlans) =>
       currentPlans.map((item) =>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../components/AdminSidebar";
 import { supabase } from "@/lib/supabase";
+import { createAuditLog } from "@/lib/adminAuditLog";
 
 export default function AdminReportsPage() {
   const router = useRouter();
@@ -68,6 +69,12 @@ export default function AdminReportsPage() {
       return;
     }
 
+    await createAuditLog({
+      action: "dismiss_report",
+      target: report.id,
+      targetType: "report",
+    });
+
     setReports((currentReports) =>
       currentReports.filter((item) => item.id !== report.id)
     );
@@ -94,6 +101,12 @@ export default function AdminReportsPage() {
       alert(error.message);
       return;
     }
+
+    await createAuditLog({
+      action: report.report_type === "Comment" ? "remove_comment" : "remove_post",
+      target: report.target_id,
+      targetType: report.report_type.toLowerCase(),
+    });
 
     setReports((currentReports) =>
       currentReports.filter((item) => item.id !== report.id)
