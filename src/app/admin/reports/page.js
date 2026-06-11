@@ -1,0 +1,628 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import AdminSidebar from "../components/AdminSidebar";
+import { supabase } from "@/lib/supabase";
+
+export default function AdminReportsPage() {
+  const router = useRouter();
+
+  const [allowed, setAllowed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [reports, setReports] = useState([]);
+  const [typeFilter, setTypeFilter] = useState("All Type");
+  const [timeFilter, setTimeFilter] = useState("This Week");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  useEffect(() => {
+    const isAdminLoggedIn = localStorage.getItem("adminLoggedIn");
+
+    if (isAdminLoggedIn !== "true") {
+      router.replace("/admin/login");
+      return;
+    }
+
+    setAllowed(true);
+    fetchReports();
+  }, [router]);
+
+  async function fetchReports() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("reports")
+      .select(
+        "id, target_id, report_type, content_owner, reporter, comment_text, post_caption, media_name, media_path, status, submitted_at"
+      )
+      .eq("status", "pending")
+      .order("submitted_at", { ascending: false });
+
+    if (error) {
+      console.error("Fetch reports error:", error.message);
+      setReports([]);
+      setLoading(false);
+      return;
+    }
+
+    setReports(data || []);
+    setLoading(false);
+  }
+
+  async function handleDismiss(report) {
+    const confirmed = window.confirm("Dismiss this report?");
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        status: "dismissed",
+      })
+      .eq("id", report.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setReports((currentReports) =>
+      currentReports.filter((item) => item.id !== report.id)
+    );
+
+    setSelectedReport(null);
+  }
+
+  async function handleRemove(report) {
+    const actionText =
+      report.report_type === "Comment" ? "Remove comment?" : "Remove post?";
+
+    const confirmed = window.confirm(actionText);
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        status: "removed",
+      })
+      .eq("id", report.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setReports((currentReports) =>
+      currentReports.filter((item) => item.id !== report.id)
+    );
+
+    setSelectedReport(null);
+  }
+
+  function handleViewMedia(report) {
+    if (!report.media_path) {
+      alert("No media uploaded.");
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("report-media")
+      .getPublicUrl(report.media_path);
+
+    if (!data?.publicUrl) {
+      alert("Unable to open media.");
+      return;
+    }
+
+    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+  }
+
+  const filteredReports = useMemo(() => {
+    let result = [...reports];
+
+    if (typeFilter !== "All Type") {
+      result = result.filter((report) => report.report_type === typeFilter);
+    }
+
+    if (timeFilter !== "All Time") {
+      const now = new Date();
+      const startDate = new Date();
+
+      if (timeFilter === "Today") {
+        startDate.setHours(0, 0, 0, 0);
+      }
+
+      if (timeFilter === "This Week") {
+        startDate.setDate(now.getDate() - 7);
+      }
+
+      if (timeFilter === "This Month") {
+        startDate.setDate(now.getDate() - 30);
+      }
+
+      result = result.filter((report) => {
+        const submittedDate = new Date(report.submitted_at);
+        return submittedDate >= startDate;
+      });
+    }
+
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (keyword) {
+      result = result.filter((report) => {
+        return (
+          report.target_id?.toLowerCase().includes(keyword) ||
+          report.report_type?.toLowerCase().includes(keyword) ||
+          report.content_owner?.toLowerCase().includes(keyword) ||
+          report.reporter?.toLowerCase().includes(keyword) ||
+          report.comment_text?.toLowerCase().includes(keyword) ||
+          report.post_caption?.toLowerCase().includes(keyword)
+        );
+      });
+    }
+
+    return result;
+  }, [reports, typeFilter, timeFilter, searchKeyword]);
+
+  if (!allowed) {
+    return null;
+  }
+
+  return (
+    <main style={styles.page}>
+      <AdminSidebar />
+
+      <section style={styles.content}>
+        <div style={styles.tableCard}>
+          <div style={styles.topRow}>
+            <h2 style={styles.title}>Recent Reports</h2>
+
+            <div style={styles.filters}>
+              <select
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
+                style={styles.select}
+              >
+                <option>All Type</option>
+                <option>Comment</option>
+                <option>Post</option>
+              </select>
+
+              <select
+                value={timeFilter}
+                onChange={(event) => setTimeFilter(event.target.value)}
+                style={styles.select}
+              >
+                <option>Today</option>
+                <option>This Week</option>
+                <option>This Month</option>
+                <option>All Time</option>
+              </select>
+
+              <div style={styles.searchBox}>
+                <SearchIcon />
+
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchKeyword}
+                  onChange={(event) => setSearchKeyword(event.target.value)}
+                  style={styles.searchInput}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.tableHeader}>
+            <div style={{ ...styles.cell, flex: 1.2 }}>Target</div>
+            <div style={{ ...styles.cell, flex: 1.1 }}>Type</div>
+            <div style={{ ...styles.cell, flex: 1.4 }}>Content Owner</div>
+            <div style={{ ...styles.cell, flex: 1.3 }}>Reporter</div>
+            <div style={{ ...styles.cell, flex: 1.4 }}>Submitted</div>
+            <div style={{ ...styles.cell, flex: 1 }}></div>
+          </div>
+
+          {loading ? (
+            <div style={styles.emptyMessage}>Loading reports...</div>
+          ) : filteredReports.length > 0 ? (
+            filteredReports.map((report) => (
+              <div key={report.id} style={styles.tableRow}>
+                <div style={{ ...styles.rowCell, flex: 1.2 }}>
+                  {report.target_id}
+                </div>
+
+                <div style={{ ...styles.rowCell, flex: 1.1 }}>
+                  {report.report_type}
+                </div>
+
+                <div style={{ ...styles.rowCell, flex: 1.4 }}>
+                  {report.content_owner || "-"}
+                </div>
+
+                <div style={{ ...styles.rowCell, flex: 1.3 }}>
+                  {report.reporter || "-"}
+                </div>
+
+                <div style={{ ...styles.rowCell, flex: 1.4 }}>
+                  {formatDateTime(report.submitted_at)}
+                </div>
+
+                <div
+                  style={{
+                    ...styles.rowCell,
+                    flex: 1,
+                    justifyContent: "flex-end",
+                    display: "flex",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReport(report)}
+                    style={styles.reviewButton}
+                  >
+                    Review
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={styles.emptyMessage}>No reports found</div>
+          )}
+        </div>
+      </section>
+
+      {selectedReport && (
+        <ReportDetailPanel
+          report={selectedReport}
+          onClose={() => setSelectedReport(null)}
+          onDismiss={handleDismiss}
+          onRemove={handleRemove}
+          onViewMedia={handleViewMedia}
+        />
+      )}
+    </main>
+  );
+}
+
+function ReportDetailPanel({
+  report,
+  onClose,
+  onDismiss,
+  onRemove,
+  onViewMedia,
+}) {
+  const isComment = report.report_type === "Comment";
+
+  return (
+    <div style={styles.overlay}>
+      <aside style={styles.detailCard}>
+        <button type="button" onClick={onClose} style={styles.closeButton}>
+          ×
+        </button>
+
+        <p style={styles.detailLine}>
+          <strong>Target:</strong> {report.target_id}
+        </p>
+
+        <p style={styles.detailLine}>
+          <strong>Type:</strong> {report.report_type}
+        </p>
+
+        <p style={styles.detailLine}>
+          <strong>Content Owner:</strong> {report.content_owner || "-"}
+        </p>
+
+        <p style={styles.detailLine}>
+          <strong>Reporter:</strong> {report.reporter || "-"}
+        </p>
+
+        <p style={styles.detailLine}>
+          <strong>Submitted:</strong> {formatDateTime(report.submitted_at)}
+        </p>
+
+        {!isComment && (
+          <div style={styles.mediaRow}>
+            <strong>Media:</strong>
+
+            <button
+              type="button"
+              onClick={() => onViewMedia(report)}
+              style={{
+                ...styles.mediaButton,
+                ...(report.media_path ? styles.mediaButtonActive : {}),
+              }}
+            >
+              View
+            </button>
+          </div>
+        )}
+
+        <p style={styles.detailParagraph}>
+          <strong>{isComment ? "Comment text:" : "Post caption:"}</strong>{" "}
+          {isComment
+            ? report.comment_text || "-"
+            : report.post_caption || "-"}
+        </p>
+
+        <div style={styles.actionRow}>
+          <button
+            type="button"
+            onClick={() => onDismiss(report)}
+            style={styles.dismissButton}
+          >
+            Dismiss
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onRemove(report)}
+            style={styles.removeButton}
+          >
+            {isComment ? "Remove Comment" : "Remove Post"}
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  return date.toLocaleString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#8f8f8f"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ marginRight: "8px", flexShrink: 0 }}
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    backgroundColor: "#f8f8ff",
+    fontFamily: "Arial, sans-serif",
+    color: "#000000",
+    position: "relative",
+  },
+
+  content: {
+    flex: 1,
+    padding: "90px 0 70px",
+    boxSizing: "border-box",
+    display: "flex",
+    justifyContent: "center",
+  },
+
+  tableCard: {
+    width: "830px",
+    backgroundColor: "#ffffff",
+    borderRadius: "28px",
+    padding: "42px 26px 34px",
+    boxSizing: "border-box",
+    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.04)",
+  },
+
+  topRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "40px",
+    gap: "20px",
+  },
+
+  title: {
+    fontSize: "17px",
+    fontWeight: "700",
+    margin: 0,
+  },
+
+  filters: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    flexWrap: "wrap",
+  },
+
+  select: {
+    height: "38px",
+    borderRadius: "8px",
+    border: "1px solid #cfcfcf",
+    padding: "0 12px",
+    fontSize: "13px",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+  },
+
+  searchBox: {
+    height: "38px",
+    width: "210px",
+    borderRadius: "8px",
+    border: "1px solid #cfcfcf",
+    display: "flex",
+    alignItems: "center",
+    padding: "0 10px",
+    boxSizing: "border-box",
+    backgroundColor: "#ffffff",
+  },
+
+  searchInput: {
+    border: "none",
+    outline: "none",
+    width: "100%",
+    fontSize: "13px",
+    backgroundColor: "transparent",
+  },
+
+  tableHeader: {
+    display: "flex",
+    alignItems: "center",
+    borderBottom: "1px solid #dcdcdc",
+    padding: "18px 10px 24px",
+    color: "#8e8e8e",
+    fontSize: "12px",
+  },
+
+  tableRow: {
+    display: "flex",
+    alignItems: "center",
+    minHeight: "62px",
+    borderBottom: "1px solid #dcdcdc",
+    padding: "0 10px",
+    boxSizing: "border-box",
+  },
+
+  cell: {
+    fontWeight: "500",
+  },
+
+  rowCell: {
+    fontSize: "12px",
+    display: "flex",
+    alignItems: "center",
+  },
+
+  reviewButton: {
+    width: "82px",
+    height: "34px",
+    borderRadius: "18px",
+    border: "none",
+    backgroundColor: "#efefef",
+    color: "#222222",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  },
+
+  emptyMessage: {
+    padding: "36px 10px",
+    textAlign: "center",
+    color: "#888888",
+    fontSize: "15px",
+  },
+
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+    paddingTop: "40px",
+    paddingRight: "52px",
+    boxSizing: "border-box",
+    zIndex: 100,
+  },
+
+  detailCard: {
+    width: "320px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "26px 20px",
+    boxSizing: "border-box",
+    position: "relative",
+  },
+
+  closeButton: {
+    position: "absolute",
+    top: "16px",
+    right: "16px",
+    border: "none",
+    backgroundColor: "transparent",
+    fontSize: "26px",
+    lineHeight: "26px",
+    cursor: "pointer",
+    color: "#777777",
+  },
+
+  detailLine: {
+    fontSize: "13px",
+    lineHeight: "20px",
+    margin: "0 0 10px",
+  },
+
+  detailParagraph: {
+    fontSize: "13px",
+    lineHeight: "19px",
+    margin: "14px 0 24px",
+  },
+
+  mediaRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontSize: "13px",
+    margin: "0 0 12px",
+  },
+
+  mediaButton: {
+    width: "68px",
+    height: "28px",
+    borderRadius: "6px",
+    border: "1px solid #cfcfcf",
+    backgroundColor: "#ffffff",
+    color: "#999999",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  },
+
+  mediaButtonActive: {
+    color: "#6658ff",
+    border: "1px solid #6658ff",
+  },
+
+  actionRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+  },
+
+  dismissButton: {
+    height: "34px",
+    borderRadius: "18px",
+    border: "1.5px solid #6658ff",
+    backgroundColor: "#ffffff",
+    color: "#6658ff",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  },
+
+  removeButton: {
+    height: "34px",
+    borderRadius: "18px",
+    border: "none",
+    backgroundColor: "#6658ff",
+    color: "#ffffff",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  },
+};

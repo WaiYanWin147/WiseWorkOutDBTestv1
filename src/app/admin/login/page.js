@@ -2,26 +2,80 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminLoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin(e) {
-    e.preventDefault();
+  async function handleLogin(event) {
+    event.preventDefault();
 
-    const adminEmail = "admin@shaperush.com";
-    const adminPassword = "admin123";
+    setError("");
+    setLoading(true);
 
-    if (email === adminEmail && password === adminPassword) {
-      localStorage.setItem("adminLoggedIn", "true");
-      router.replace("/admin/dashboard");
-    } else {
+    const cleanEmail = email.trim().toLowerCase();
+
+    const { data: loginData, error: loginError } =
+      await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+    if (loginError) {
       setError("Invalid admin email or password");
+      setLoading(false);
+      return;
     }
+
+    if (!loginData?.user) {
+      setError("Login failed. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email, role, user_type, status")
+      .eq("id", loginData.user.id)
+      .single();
+
+    if (profileError) {
+      await supabase.auth.signOut();
+      localStorage.removeItem("adminLoggedIn");
+
+      setError("Unable to verify admin permission.");
+      setLoading(false);
+      return;
+    }
+
+    if (profile?.role !== "admin") {
+      await supabase.auth.signOut();
+      localStorage.removeItem("adminLoggedIn");
+
+      setError("Only admin can access this page.");
+      setLoading(false);
+      return;
+    }
+
+    if (profile?.status !== "active") {
+      await supabase.auth.signOut();
+      localStorage.removeItem("adminLoggedIn");
+
+      setError("This admin account is not active.");
+      setLoading(false);
+      return;
+    }
+
+    localStorage.setItem("adminLoggedIn", "true");
+    localStorage.setItem("adminEmail", profile.email || cleanEmail);
+
+    router.replace("/admin/dashboard");
   }
 
   return (
@@ -32,12 +86,13 @@ export default function AdminLoginPage() {
         <form onSubmit={handleLogin} style={styles.form}>
           <div style={styles.formGroup}>
             <label style={styles.label}>Email</label>
+
             <input
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
+              onChange={(event) => {
+                setEmail(event.target.value);
                 setError("");
               }}
               style={styles.input}
@@ -47,12 +102,13 @@ export default function AdminLoginPage() {
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Password</label>
+
             <input
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
+              onChange={(event) => {
+                setPassword(event.target.value);
                 setError("");
               }}
               style={styles.input}
@@ -62,8 +118,15 @@ export default function AdminLoginPage() {
 
           {error && <p style={styles.error}>{error}</p>}
 
-          <button type="submit" style={styles.button}>
-            Login
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              ...(loading ? styles.buttonDisabled : {}),
+            }}
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>
@@ -137,6 +200,11 @@ const styles = {
     fontWeight: "700",
     cursor: "pointer",
     marginTop: "2px",
+  },
+
+  buttonDisabled: {
+    opacity: 0.65,
+    cursor: "not-allowed",
   },
 
   error: {

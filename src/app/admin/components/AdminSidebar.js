@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  function handleLogout() {
+  async function handleLogout() {
+    await supabase.auth.signOut();
+
     localStorage.removeItem("adminLoggedIn");
+    localStorage.removeItem("adminEmail");
+
     router.replace("/admin/login");
   }
 
@@ -69,9 +74,28 @@ export default function AdminSidebar() {
               Plans
             </div>
           </Link>
-          
-          <div style={styles.navItem}>Reviews</div>
-          <div style={styles.navItem}>Reports</div>
+
+          <Link href="/admin/reviews" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/reviews") ? styles.activeNavItem : {}),
+              }}
+            >
+              Reviews
+            </div>
+          </Link>
+
+          <Link href="/admin/reports" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/reports") ? styles.activeNavItem : {}),
+              }}
+            >
+              Reports
+            </div>
+          </Link>
         </nav>
 
         <div style={styles.divider}></div>
@@ -87,7 +111,16 @@ export default function AdminSidebar() {
         <div style={styles.sectionTitle}>SYSTEM</div>
 
         <nav style={styles.nav}>
-          <div style={styles.navItem}>Audit Logs</div>
+          <Link href="/admin/audit-logs" style={styles.linkReset}>
+            <div
+              style={{
+                ...styles.navItem,
+                ...(isActive("/admin/audit-logs") ? styles.activeNavItem : {}),
+              }}
+            >
+              Audit Logs
+            </div>
+          </Link>
         </nav>
       </div>
 
