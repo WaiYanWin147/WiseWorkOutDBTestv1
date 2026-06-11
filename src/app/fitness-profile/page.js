@@ -104,13 +104,35 @@ export default function FitnessProfilePage() {
 
     const user = userData.user;
 
+    const safeFileName = certificate.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = `${user.id}/${Date.now()}-${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("certifications")
+      .upload(filePath, certificate, {
+        upsert: true,
+      });
+
+    if (uploadError) {
+      alert(uploadError.message);
+      return;
+    }
+
+
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
         full_name: displayName,
+        display_name: displayName,
+        bio: bio,
+        experience: Number(experience),
+        specializations: specializations,
+        certificate_name: certificate.name,
+        certificate_path: filePath,
         user_type: "Fitness professional",
-        status: "active",
+        status: "pending",
         approved: false,
+        submitted_at: new Date().toISOString(),
       })
       .eq("id", user.id);
 

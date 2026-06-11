@@ -20,6 +20,7 @@ export default function AdminDashboardPage() {
     freeUsers: 0,
     fitnessPros: 0,
     signupsByDay: [0, 0, 0, 0, 0, 0, 0],
+    signupLabels: ["", "", "", "", "", "", ""],
     hasSignupDate: true,
   });
 
@@ -85,6 +86,7 @@ export default function AdminDashboardPage() {
           })
           .eq("user_type", "Fitness professional")
           .or("approved.eq.false,approved.is.null")
+          .neq("status", "rejected")
       ),
 
       fetchCount(
@@ -128,6 +130,7 @@ export default function AdminDashboardPage() {
       freeUsers,
       fitnessPros,
       signupsByDay: signupResult.signupsByDay,
+      signupLabels: signupResult.signupLabels,
       hasSignupDate: signupResult.hasSignupDate,
     });
 
@@ -136,32 +139,41 @@ export default function AdminDashboardPage() {
 
   async function fetchNewSignups() {
     const rangeDays = Number(selectedRange);
-    const today = new Date();
+
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
 
     const startDate = new Date();
-    startDate.setDate(today.getDate() - rangeDays + 1);
+    startDate.setDate(endDate.getDate() - rangeDays + 1);
     startDate.setHours(0, 0, 0, 0);
 
     const { data, error } = await supabase
       .from("profiles")
       .select("created_at")
-      .gte("created_at", startDate.toISOString());
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString());
 
     if (error) {
-      console.warn(
-        "New Signups chart needs created_at column:",
-        error.message
-      );
+      console.warn("New Signups chart needs created_at column:", error.message);
 
       return {
         signupsByDay: [0, 0, 0, 0, 0, 0, 0],
+        signupLabels: ["", "", "", "", "", "", ""],
         hasSignupDate: false,
       };
     }
 
     const bucketCount = 7;
     const bucketSize = Math.ceil(rangeDays / bucketCount);
-    const result = [0, 0, 0, 0, 0, 0, 0];
+    const result = Array(bucketCount).fill(0);
+    const labels = Array(bucketCount).fill("");
+
+    for (let index = 0; index < bucketCount; index++) {
+      const labelDate = new Date(startDate);
+      const dayOffset = Math.min(index * bucketSize, rangeDays - 1);
+      labelDate.setDate(startDate.getDate() + dayOffset);
+      labels[index] = formatChartDate(labelDate);
+    }
 
     data.forEach((user) => {
       if (!user.created_at) return;
@@ -184,6 +196,7 @@ export default function AdminDashboardPage() {
 
     return {
       signupsByDay: result,
+      signupLabels: labels,
       hasSignupDate: true,
     };
   }
@@ -210,14 +223,28 @@ export default function AdminDashboardPage() {
   const proPercent =
     totalTier === 0 ? 0 : 100 - freePercent - priorityPercent;
 
-  const pieBackground =
-    totalTier === 0
-      ? "#e5e5e5"
-      : `conic-gradient(
-          #2d7fb8 0% ${freePercent}%,
-          #ff9800 ${freePercent}% ${freePercent + priorityPercent}%,
-          #2ca02c ${freePercent + priorityPercent}% 100%
-        )`;
+  const pieData = [
+    {
+      label: "Free",
+      value: dashboardData.freeUsers,
+      percent: freePercent,
+      color: "#2d7fb8",
+    },
+    {
+      label: "Priority",
+      value: dashboardData.priorityUsers,
+      percent: priorityPercent,
+      color: "#ff9800",
+    },
+    {
+      label: "Pro",
+      value: dashboardData.fitnessPros,
+      percent: proPercent,
+      color: "#2ca02c",
+    },
+  ];
+
+  const pieSlices = buildPieSlices(pieData);
 
   const signupPoints = getSignupChartPoints(dashboardData.signupsByDay);
   const signupPolyline = signupPoints.map(([x, y]) => `${x},${y}`).join(" ");
@@ -247,7 +274,9 @@ export default function AdminDashboardPage() {
 
           <StatCard
             title="Approved Pros"
-            value={loading ? "Loading..." : formatNumber(dashboardData.approvedPros)}
+            value={
+              loading ? "Loading..." : formatNumber(dashboardData.approvedPros)
+            }
           />
 
           <div style={styles.statCard}>
@@ -259,15 +288,22 @@ export default function AdminDashboardPage() {
             </div>
 
             <p style={styles.statValue}>
-              {loading ? "Loading..." : formatNumber(dashboardData.pendingProApps)}
+              {loading
+                ? "Loading..."
+                : formatNumber(dashboardData.pendingProApps)}
             </p>
 
-            <button style={styles.reviewButton}>Review</button>
+            <button
+              onClick={() => router.push("/admin/pending-professionals")}
+              style={styles.reviewButton}
+            >Review</button>
           </div>
 
           <StatCard
             title="Priority Users"
-            value={loading ? "Loading..." : formatNumber(dashboardData.priorityUsers)}
+            value={
+              loading ? "Loading..." : formatNumber(dashboardData.priorityUsers)
+            }
           />
         </div>
 
@@ -276,16 +312,44 @@ export default function AdminDashboardPage() {
             <h3 style={styles.chartTitle}>User Tier Breakdown</h3>
 
             <div style={styles.pieArea}>
-              <div
-                style={{
-                  ...styles.pieChart,
-                  background: pieBackground,
-                }}
-              >
-                <span style={styles.pieLabelFree}>{freePercent}%</span>
-                <span style={styles.pieLabelPriority}>{priorityPercent}%</span>
-                <span style={styles.pieLabelPro}>{proPercent}%</span>
-              </div>
+              <svg viewBox="0 0 240 240" style={styles.pieSvg}>
+                {totalTier === 0 ? (
+                  <>
+                    <circle cx="120" cy="120" r="100" fill="#e5e5e5" />
+                    <text
+                      x="120"
+                      y="124"
+                      textAnchor="middle"
+                      fontSize="14"
+                      fontWeight="700"
+                      fill="#ffffff"
+                    >
+                      0%
+                    </text>
+                  </>
+                ) : (
+                  <>
+                    {pieSlices.map((slice) => (
+                      <path key={slice.label} d={slice.path} fill={slice.color} />
+                    ))}
+
+                    {pieSlices.map((slice) => (
+                      <text
+                        key={`${slice.label}-label`}
+                        x={slice.labelX}
+                        y={slice.labelY}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize="13"
+                        fontWeight="700"
+                        fill="#ffffff"
+                      >
+                        {slice.percent}%
+                      </text>
+                    ))}
+                  </>
+                )}
+              </svg>
 
               <div style={styles.legend}>
                 <Legend
@@ -307,41 +371,47 @@ export default function AdminDashboardPage() {
           <div style={styles.chartCard}>
             <h3 style={styles.chartTitle}>New Signups</h3>
 
-            <svg viewBox="0 0 460 260" style={styles.lineChart}>
-              {[20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220].map(
-                (y) => (
-                  <line
-                    key={`h-${y}`}
-                    x1="30"
-                    y1={y}
-                    x2="440"
-                    y2={y}
-                    stroke="#d7d7d7"
-                    strokeWidth="1"
-                  />
-                )
-              )}
+            <svg viewBox="0 0 500 280" style={styles.lineChart}>
+              {[35, 69, 103, 137, 171, 205].map((y) => (
+                <line
+                  key={`h-${y}`}
+                  x1="50"
+                  y1={y}
+                  x2="460"
+                  y2={y}
+                  stroke="#d7d7d7"
+                  strokeWidth="1"
+                />
+              ))}
 
-              {[50, 110, 170, 230, 290, 350, 410].map((x) => (
+              {[50, 118, 186, 254, 322, 390, 458].map((x) => (
                 <line
                   key={`v-${x}`}
                   x1={x}
-                  y1="20"
+                  y1="35"
                   x2={x}
-                  y2="220"
+                  y2="205"
                   stroke="#d7d7d7"
                   strokeWidth="1"
                 />
               ))}
 
               <line
-                x1="30"
-                y1="140"
-                x2="440"
-                y2="140"
-                stroke="#22c58a"
-                strokeWidth="2"
-                strokeDasharray="6 5"
+                x1="50"
+                y1="205"
+                x2="460"
+                y2="205"
+                stroke="#777777"
+                strokeWidth="1.5"
+              />
+
+              <line
+                x1="50"
+                y1="35"
+                x2="50"
+                y2="205"
+                stroke="#777777"
+                strokeWidth="1.5"
               />
 
               {dashboardData.hasSignupDate ? (
@@ -354,20 +424,43 @@ export default function AdminDashboardPage() {
                   />
 
                   {signupPoints.map(([x, y], index) => (
-                    <circle
-                      key={index}
-                      cx={x}
-                      cy={y}
-                      r="6"
-                      fill="#5dade2"
-                      stroke="#1683d8"
-                      strokeWidth="2"
-                    />
+                    <g key={index}>
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r="6"
+                        fill="#5dade2"
+                        stroke="#1683d8"
+                        strokeWidth="2"
+                      />
+
+                      <text
+                        x={x}
+                        y={Math.max(y - 12, 18)}
+                        textAnchor="middle"
+                        fontSize="12"
+                        fontWeight="700"
+                        fill="#111111"
+                      >
+                        {dashboardData.signupsByDay[index]}
+                      </text>
+
+                      <text
+                        x={x}
+                        y="232"
+                        textAnchor="middle"
+                        fontSize="11"
+                        fontWeight="600"
+                        fill="#555555"
+                      >
+                        {dashboardData.signupLabels[index]}
+                      </text>
+                    </g>
                   ))}
                 </>
               ) : (
                 <text
-                  x="230"
+                  x="250"
                   y="135"
                   textAnchor="middle"
                   fontSize="15"
@@ -385,14 +478,77 @@ export default function AdminDashboardPage() {
   );
 }
 
+function buildPieSlices(pieData) {
+  const total = pieData.reduce((sum, item) => sum + item.value, 0);
+
+  if (total === 0) {
+    return [];
+  }
+
+  let currentAngle = 0;
+
+  return pieData
+    .filter((item) => item.value > 0)
+    .map((item) => {
+      const angle = (item.value / total) * 360;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + angle;
+      const midAngle = startAngle + angle / 2;
+
+      currentAngle = endAngle;
+
+      const path = describePieSlice(120, 120, 100, startAngle, endAngle);
+      const labelPosition = polarToCartesian(120, 120, 58, midAngle);
+
+      return {
+        ...item,
+        path,
+        labelX: labelPosition.x,
+        labelY: labelPosition.y,
+      };
+    });
+}
+
+function describePieSlice(cx, cy, radius, startAngle, endAngle) {
+  const finalEndAngle =
+    endAngle - startAngle >= 360 ? startAngle + 359.999 : endAngle;
+
+  const start = polarToCartesian(cx, cy, radius, startAngle);
+  const end = polarToCartesian(cx, cy, radius, finalEndAngle);
+  const largeArcFlag = finalEndAngle - startAngle > 180 ? 1 : 0;
+
+  return [
+    `M ${cx} ${cy}`,
+    `L ${start.x} ${start.y}`,
+    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function polarToCartesian(cx, cy, radius, angleInDegrees) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
+
+  return {
+    x: cx + radius * Math.cos(angleInRadians),
+    y: cy + radius * Math.sin(angleInRadians),
+  };
+}
+
 function getSignupChartPoints(signupsByDay) {
-  const xPositions = [50, 110, 170, 230, 290, 350, 410];
+  const xPositions = [50, 118, 186, 254, 322, 390, 458];
+  const chartTop = 35;
+  const chartBottom = 205;
+  const chartHeight = chartBottom - chartTop;
   const maxValue = Math.max(...signupsByDay, 1);
 
   return signupsByDay.map((value, index) => {
-    const y = 220 - (value / maxValue) * 160;
+    const y = chartBottom - (value / maxValue) * chartHeight;
     return [xPositions[index], y];
   });
+}
+
+function formatChartDate(date) {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 function formatNumber(value) {
@@ -439,7 +595,7 @@ const styles = {
   },
 
   select: {
-    width: "140px",
+    width: "155px",
     height: "42px",
     borderRadius: "8px",
     border: "1px solid #cfcfcf",
@@ -524,7 +680,7 @@ const styles = {
   chartTitle: {
     fontSize: "17px",
     fontWeight: "700",
-    margin: "0 0 26px",
+    margin: "0 0 20px",
   },
 
   pieArea: {
@@ -534,38 +690,9 @@ const styles = {
     gap: "30px",
   },
 
-  pieChart: {
+  pieSvg: {
     width: "230px",
     height: "230px",
-    borderRadius: "50%",
-    position: "relative",
-  },
-
-  pieLabelFree: {
-    position: "absolute",
-    right: "50px",
-    bottom: "78px",
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: "700",
-  },
-
-  pieLabelPriority: {
-    position: "absolute",
-    left: "38px",
-    top: "105px",
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: "700",
-  },
-
-  pieLabelPro: {
-    position: "absolute",
-    top: "34px",
-    left: "96px",
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: "700",
   },
 
   legend: {
@@ -589,6 +716,6 @@ const styles = {
 
   lineChart: {
     width: "100%",
-    height: "250px",
+    height: "260px",
   },
 };
