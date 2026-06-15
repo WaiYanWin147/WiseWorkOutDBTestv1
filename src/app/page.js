@@ -202,7 +202,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#f7f7ff] text-black">
       {/* Navbar */}
-      <nav className="h-[72px] bg-white flex items-center justify-between px-10 shadow-sm">
+      <nav className="sticky top-0 z-50 h-[72px] bg-white flex items-center justify-between px-10 shadow-sm">
         <h1 className="text-[22px] font-bold tracking-tight">ShapeRush</h1>
 
         <div className="hidden md:flex items-center gap-9 text-[13px] font-medium">

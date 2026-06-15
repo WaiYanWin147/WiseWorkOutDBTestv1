@@ -4,7 +4,7 @@ export default function PrivacyPolicyPage() {
   return (
     <main className="min-h-screen bg-[#f8f8ff] text-black">
       {/* Navbar */}
-      <nav className="h-[72px] bg-white flex items-center justify-between px-10 shadow-sm">
+      <nav className="sticky top-0 z-50 h-[72px] bg-white flex items-center justify-between px-10 shadow-sm">
         <Link href="/" className="text-[22px] font-bold tracking-tight">
           ShapeRush
         </Link>
