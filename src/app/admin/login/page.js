@@ -187,6 +187,8 @@ const styles = {
     fontSize: "14px",
     outline: "none",
     boxSizing: "border-box",
+    color: "#111111",
+    backgroundColor: "#ffffff",
   },
 
   button: {
