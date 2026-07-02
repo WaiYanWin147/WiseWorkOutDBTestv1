@@ -30,13 +30,12 @@ export default function PendingProfessionalsPage() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("fitness_professional")
       .select(
-        "id, full_name, email, display_name, bio, experience, specializations, certificate_name, certificate_path, status, approved, submitted_at, created_at"
+        "profile_id, display_name, bio, experience, specializations, certificate_name, certificate_path, approved, submitted_at, profiles!inner(full_name, email, status, created_at)"
       )
-      .eq("user_type", "Fitness professional")
       .or("approved.eq.false,approved.is.null")
-      .neq("status", "rejected")
+      .neq("profiles.status", "rejected")
       .order("submitted_at", { ascending: false });
 
     if (error) {
@@ -46,7 +45,23 @@ export default function PendingProfessionalsPage() {
       return;
     }
 
-    setApplications(data || []);
+    const formattedApplications = (data || []).map((row) => ({
+      id: row.profile_id,
+      full_name: row.profiles?.full_name,
+      email: row.profiles?.email,
+      status: row.profiles?.status,
+      created_at: row.profiles?.created_at,
+      display_name: row.display_name,
+      bio: row.bio,
+      experience: row.experience,
+      specializations: row.specializations,
+      certificate_name: row.certificate_name,
+      certificate_path: row.certificate_path,
+      approved: row.approved,
+      submitted_at: row.submitted_at,
+    }));
+
+    setApplications(formattedApplications);
     setLoading(false);
   }
 
@@ -57,16 +72,27 @@ export default function PendingProfessionalsPage() {
 
     if (!confirmApprove) return;
 
-    const { error } = await supabase
-      .from("profiles")
+    const { error: proError } = await supabase
+      .from("fitness_professional")
       .update({
         approved: true,
+      })
+      .eq("profile_id", application.id);
+
+    if (proError) {
+      alert(proError.message);
+      return;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
         status: "active",
       })
       .eq("id", application.id);
 
-    if (error) {
-      alert(error.message);
+    if (profileError) {
+      alert(profileError.message);
       return;
     }
 
@@ -89,16 +115,27 @@ export default function PendingProfessionalsPage() {
 
     if (!confirmReject) return;
 
-    const { error } = await supabase
-      .from("profiles")
+    const { error: proError } = await supabase
+      .from("fitness_professional")
       .update({
         approved: false,
+      })
+      .eq("profile_id", application.id);
+
+    if (proError) {
+      alert(proError.message);
+      return;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
         status: "rejected",
       })
       .eq("id", application.id);
 
-    if (error) {
-      alert(error.message);
+    if (profileError) {
+      alert(profileError.message);
       return;
     }
 

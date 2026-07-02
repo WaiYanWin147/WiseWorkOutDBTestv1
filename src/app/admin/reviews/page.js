@@ -39,7 +39,7 @@ export default function AdminReviewsPage() {
     const { data, error } = await supabase
       .from("reviews")
       .select(
-        "id, reviewer_id, reviewer_name, reviewer_email, tier, rating, feedback, media_name, media_path, ai_analysis, submitted_at"
+        "review_id, reviewer_id, rating, feedback, media_path, ai_analysis, submitted_at, profiles(full_name, email, user_type)"
       )
       .order("submitted_at", { ascending: false });
 
@@ -50,7 +50,20 @@ export default function AdminReviewsPage() {
       return;
     }
 
-    setReviews(data || []);
+    const formattedReviews = (data || []).map((review) => ({
+      id: review.review_id,
+      reviewer_id: review.reviewer_id,
+      reviewer_name: review.profiles?.full_name || "-",
+      reviewer_email: review.profiles?.email || "-",
+      tier: review.profiles?.user_type || "-",
+      rating: review.rating,
+      feedback: review.feedback,
+      media_path: review.media_path,
+      ai_analysis: review.ai_analysis,
+      submitted_at: review.submitted_at,
+    }));
+
+    setReviews(formattedReviews);
     setLoading(false);
   }
 
@@ -363,10 +376,6 @@ function ReviewDetailPanel({ review, onClose, onViewMedia }) {
             View
           </button>
         </div>
-
-        {review.media_name && (
-          <p style={styles.fileNameText}>{review.media_name}</p>
-        )}
 
         <p style={styles.detailLine}>
           <strong>AI Analysis:</strong>{" "}

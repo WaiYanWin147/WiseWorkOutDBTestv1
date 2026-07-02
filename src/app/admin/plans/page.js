@@ -36,7 +36,7 @@ export default function AdminPlansPage() {
 
     const { data, error } = await supabase
       .from("free_plans")
-      .select("id, plan_name, exercise_count, category, status, created_at")
+      .select("free_plan_id, plan_name, category, status, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -55,7 +55,7 @@ export default function AdminPlansPage() {
 
     const { data, error } = await supabase
       .from("personalized_plans")
-      .select("id, plan_name, client_name, professional_name, created_at")
+      .select("personalized_plan_id, plan_name, client_id, professional_id, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -86,7 +86,7 @@ export default function AdminPlansPage() {
       .update({
         status: nextStatus,
       })
-      .eq("id", plan.id);
+      .eq("free_plan_id", plan.free_plan_id);
 
     if (error) {
       alert(error.message);
@@ -95,13 +95,15 @@ export default function AdminPlansPage() {
 
     await createAuditLog({
       action: nextStatus === "hidden" ? "hide_plan" : "publish_plan",
-      target: plan.id,
+      target: plan.free_plan_id,
       targetType: "free_plan",
     });
 
     setFreePlans((currentPlans) =>
       currentPlans.map((item) =>
-        item.id === plan.id ? { ...item, status: nextStatus } : item
+        item.free_plan_id === plan.free_plan_id
+          ? { ...item, status: nextStatus }
+          : item
       )
     );
   }
@@ -113,8 +115,8 @@ export default function AdminPlansPage() {
 
     return (
       plan.plan_name?.toLowerCase().includes(keyword) ||
-      plan.client_name?.toLowerCase().includes(keyword) ||
-      plan.professional_name?.toLowerCase().includes(keyword)
+      plan.client_id?.toLowerCase().includes(keyword) ||
+      plan.professional_id?.toLowerCase().includes(keyword)
     );
   });
 
@@ -137,7 +139,6 @@ export default function AdminPlansPage() {
 
           <div style={styles.freeTableHeader}>
             <div style={{ ...styles.headerCell, flex: 1.5 }}>Plan Name</div>
-            <div style={{ ...styles.headerCell, flex: 1.5 }}>Exercise</div>
             <div style={{ ...styles.headerCell, flex: 1.5 }}>Category</div>
             <div style={{ ...styles.headerCell, flex: 1.4 }}>Status</div>
             <div style={{ ...styles.headerCell, flex: 1 }}></div>
@@ -147,13 +148,9 @@ export default function AdminPlansPage() {
             <div style={styles.emptyMessage}>Loading free plans...</div>
           ) : freePlans.length > 0 ? (
             freePlans.map((plan) => (
-              <div key={plan.id} style={styles.freeTableRow}>
+              <div key={plan.free_plan_id} style={styles.freeTableRow}>
                 <div style={{ ...styles.rowCell, flex: 1.5 }}>
                   {plan.plan_name}
-                </div>
-
-                <div style={{ ...styles.rowCell, flex: 1.5 }}>
-                  {plan.exercise_count}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.5 }}>
@@ -224,8 +221,8 @@ export default function AdminPlansPage() {
 
           <div style={styles.personalizedTableHeader}>
             <div style={{ ...styles.headerCell, flex: 1.5 }}>Plan Name</div>
-            <div style={{ ...styles.headerCell, flex: 1.5 }}>Client</div>
-            <div style={{ ...styles.headerCell, flex: 1.5 }}>Professional</div>
+            <div style={{ ...styles.headerCell, flex: 1.5 }}>Client ID</div>
+            <div style={{ ...styles.headerCell, flex: 1.5 }}>Professional ID</div>
           </div>
 
           {loadingPersonalizedPlans ? (
@@ -234,17 +231,20 @@ export default function AdminPlansPage() {
             </div>
           ) : filteredPersonalizedPlans.length > 0 ? (
             filteredPersonalizedPlans.map((plan) => (
-              <div key={plan.id} style={styles.personalizedTableRow}>
+              <div
+                key={plan.personalized_plan_id}
+                style={styles.personalizedTableRow}
+              >
                 <div style={{ ...styles.rowCell, flex: 1.5 }}>
                   {plan.plan_name}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.5 }}>
-                  {plan.client_name || "-"}
+                  {shortId(plan.client_id)}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.5 }}>
-                  {plan.professional_name || "-"}
+                  {shortId(plan.professional_id)}
                 </div>
               </div>
             ))
@@ -257,6 +257,11 @@ export default function AdminPlansPage() {
       </section>
     </main>
   );
+}
+
+function shortId(id) {
+  if (!id) return "-";
+  return id.slice(0, 8);
 }
 
 function SearchIcon() {

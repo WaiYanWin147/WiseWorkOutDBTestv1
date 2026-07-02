@@ -36,11 +36,10 @@ export default function AdminProfessionalsPage() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("fitness_professional")
       .select(
-        "id, full_name, email, display_name, bio, experience, specializations, certificate_name, certificate_path, status, approved, submitted_at, created_at"
+        "profile_id, display_name, bio, experience, specializations, certificate_name, certificate_path, approved, submitted_at, profiles!inner(full_name, email, status, created_at)"
       )
-      .eq("user_type", "Fitness professional")
       .order("submitted_at", { ascending: false });
 
     if (error) {
@@ -51,25 +50,28 @@ export default function AdminProfessionalsPage() {
     }
 
     const formattedProfessionals = (data || [])
-      .filter((professional) => professional.status !== "rejected")
+      .filter((professional) => professional.profiles?.status !== "rejected")
       .map((professional) => ({
-        id: professional.id,
-        shortId: shortId(professional.id),
+        id: professional.profile_id,
+        shortId: shortId(professional.profile_id),
         name:
           professional.display_name ||
-          professional.full_name ||
+          professional.profiles?.full_name ||
           "Not provided",
-        email: professional.email || "-",
+        email: professional.profiles?.email || "-",
         bio: professional.bio || "",
         experience: professional.experience,
         specializations: professional.specializations || "-",
         certificateName: professional.certificate_name || "",
         certificatePath: professional.certificate_path || "",
-        status: getProfessionalStatus(professional),
-        rawStatus: professional.status,
+        status: getProfessionalStatus({
+          status: professional.profiles?.status,
+          approved: professional.approved,
+        }),
+        rawStatus: professional.profiles?.status,
         approved: professional.approved,
         submittedAt: professional.submitted_at,
-        createdAt: professional.created_at,
+        createdAt: professional.profiles?.created_at,
       }));
 
     setProfessionals(formattedProfessionals);

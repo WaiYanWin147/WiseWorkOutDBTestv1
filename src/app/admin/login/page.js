@@ -39,22 +39,13 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, email, role, user_type, status")
-      .eq("id", loginData.user.id)
+    const { data: adminRow, error: adminError } = await supabase
+      .from("admin")
+      .select("profile_id, role")
+      .eq("profile_id", loginData.user.id)
       .single();
 
-    if (profileError) {
-      await supabase.auth.signOut();
-      localStorage.removeItem("adminLoggedIn");
-
-      setError("Unable to verify admin permission.");
-      setLoading(false);
-      return;
-    }
-
-    if (profile?.role !== "admin") {
+    if (adminError || !adminRow) {
       await supabase.auth.signOut();
       localStorage.removeItem("adminLoggedIn");
 
@@ -63,7 +54,13 @@ export default function AdminLoginPage() {
       return;
     }
 
-    if (profile?.status !== "active") {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("email, status")
+      .eq("id", loginData.user.id)
+      .single();
+
+    if (profileError || profile?.status !== "active") {
       await supabase.auth.signOut();
       localStorage.removeItem("adminLoggedIn");
 
@@ -74,7 +71,6 @@ export default function AdminLoginPage() {
 
     localStorage.setItem("adminLoggedIn", "true");
     localStorage.setItem("adminEmail", profile.email || cleanEmail);
-
     router.replace("/admin/dashboard");
   }
 

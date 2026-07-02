@@ -68,26 +68,15 @@ export default function AdminDashboardPage() {
 
       fetchCount(
         supabase
-          .from("profiles")
+          .from("fitness_professional")
           .select("*", {
             count: "exact",
             head: true,
           })
-          .eq("user_type", "Fitness professional")
           .eq("approved", true)
       ),
 
-      fetchCount(
-        supabase
-          .from("profiles")
-          .select("*", {
-            count: "exact",
-            head: true,
-          })
-          .eq("user_type", "Fitness professional")
-          .or("approved.eq.false,approved.is.null")
-          .neq("status", "rejected")
-      ),
+      fetchPendingProAppsCount(),
 
       fetchCount(
         supabase
@@ -135,6 +124,21 @@ export default function AdminDashboardPage() {
     });
 
     setLoading(false);
+  }
+
+  async function fetchPendingProAppsCount() {
+    const { data, error } = await supabase
+      .from("fitness_professional")
+      .select("profile_id, approved, profiles!inner(status)")
+      .or("approved.eq.false,approved.is.null")
+      .neq("profiles.status", "rejected");
+
+    if (error) {
+      console.error("Pending pro apps count error:", error.message);
+      return 0;
+    }
+
+    return data?.length || 0;
   }
 
   async function fetchNewSignups() {

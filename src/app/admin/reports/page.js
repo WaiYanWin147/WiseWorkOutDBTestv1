@@ -36,7 +36,7 @@ export default function AdminReportsPage() {
     const { data, error } = await supabase
       .from("reports")
       .select(
-        "id, target_id, report_type, content_owner, reporter, comment_text, post_caption, media_name, media_path, status, submitted_at"
+        "report_id, reporter_id, content_type, report_type, status, submitted_at"
       )
       .eq("status", "pending")
       .order("submitted_at", { ascending: false });
@@ -62,7 +62,7 @@ export default function AdminReportsPage() {
       .update({
         status: "dismissed",
       })
-      .eq("id", report.id);
+      .eq("report_id", report.report_id);
 
     if (error) {
       alert(error.message);
@@ -71,20 +71,20 @@ export default function AdminReportsPage() {
 
     await createAuditLog({
       action: "dismiss_report",
-      target: report.id,
+      target: report.report_id,
       targetType: "report",
     });
 
     setReports((currentReports) =>
-      currentReports.filter((item) => item.id !== report.id)
+      currentReports.filter((item) => item.report_id !== report.report_id)
     );
 
     setSelectedReport(null);
   }
 
   async function handleRemove(report) {
-    const actionText =
-      report.report_type === "Comment" ? "Remove comment?" : "Remove post?";
+    const isComment = report.content_type?.toLowerCase() === "comment";
+    const actionText = isComment ? "Remove comment?" : "Remove post?";
 
     const confirmed = window.confirm(actionText);
 
@@ -95,7 +95,7 @@ export default function AdminReportsPage() {
       .update({
         status: "removed",
       })
-      .eq("id", report.id);
+      .eq("report_id", report.report_id);
 
     if (error) {
       alert(error.message);
@@ -103,41 +103,23 @@ export default function AdminReportsPage() {
     }
 
     await createAuditLog({
-      action: report.report_type === "Comment" ? "remove_comment" : "remove_post",
-      target: report.target_id,
-      targetType: report.report_type.toLowerCase(),
+      action: isComment ? "remove_comment" : "remove_post",
+      target: report.report_id,
+      targetType: report.content_type?.toLowerCase() || "content",
     });
 
     setReports((currentReports) =>
-      currentReports.filter((item) => item.id !== report.id)
+      currentReports.filter((item) => item.report_id !== report.report_id)
     );
 
     setSelectedReport(null);
-  }
-
-  function handleViewMedia(report) {
-    if (!report.media_path) {
-      alert("No media uploaded.");
-      return;
-    }
-
-    const { data } = supabase.storage
-      .from("report-media")
-      .getPublicUrl(report.media_path);
-
-    if (!data?.publicUrl) {
-      alert("Unable to open media.");
-      return;
-    }
-
-    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
   }
 
   const filteredReports = useMemo(() => {
     let result = [...reports];
 
     if (typeFilter !== "All Type") {
-      result = result.filter((report) => report.report_type === typeFilter);
+      result = result.filter((report) => report.content_type === typeFilter);
     }
 
     if (timeFilter !== "All Time") {
@@ -167,12 +149,9 @@ export default function AdminReportsPage() {
     if (keyword) {
       result = result.filter((report) => {
         return (
-          report.target_id?.toLowerCase().includes(keyword) ||
-          report.report_type?.toLowerCase().includes(keyword) ||
-          report.content_owner?.toLowerCase().includes(keyword) ||
-          report.reporter?.toLowerCase().includes(keyword) ||
-          report.comment_text?.toLowerCase().includes(keyword) ||
-          report.post_caption?.toLowerCase().includes(keyword)
+          report.reporter_id?.toLowerCase().includes(keyword) ||
+          report.content_type?.toLowerCase().includes(keyword) ||
+          report.report_type?.toLowerCase().includes(keyword)
         );
       });
     }
@@ -230,10 +209,9 @@ export default function AdminReportsPage() {
           </div>
 
           <div style={styles.tableHeader}>
-            <div style={{ ...styles.cell, flex: 1.2 }}>Target</div>
-            <div style={{ ...styles.cell, flex: 1.1 }}>Type</div>
-            <div style={{ ...styles.cell, flex: 1.4 }}>Content Owner</div>
             <div style={{ ...styles.cell, flex: 1.3 }}>Reporter</div>
+            <div style={{ ...styles.cell, flex: 1.1 }}>Content Type</div>
+            <div style={{ ...styles.cell, flex: 1.3 }}>Report Type</div>
             <div style={{ ...styles.cell, flex: 1.4 }}>Submitted</div>
             <div style={{ ...styles.cell, flex: 1 }}></div>
           </div>
@@ -242,21 +220,17 @@ export default function AdminReportsPage() {
             <div style={styles.emptyMessage}>Loading reports...</div>
           ) : filteredReports.length > 0 ? (
             filteredReports.map((report) => (
-              <div key={report.id} style={styles.tableRow}>
-                <div style={{ ...styles.rowCell, flex: 1.2 }}>
-                  {report.target_id}
+              <div key={report.report_id} style={styles.tableRow}>
+                <div style={{ ...styles.rowCell, flex: 1.3 }}>
+                  {shortId(report.reporter_id)}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.1 }}>
-                  {report.report_type}
-                </div>
-
-                <div style={{ ...styles.rowCell, flex: 1.4 }}>
-                  {report.content_owner || "-"}
+                  {report.content_type}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.3 }}>
-                  {report.reporter || "-"}
+                  {report.report_type}
                 </div>
 
                 <div style={{ ...styles.rowCell, flex: 1.4 }}>
@@ -293,21 +267,14 @@ export default function AdminReportsPage() {
           onClose={() => setSelectedReport(null)}
           onDismiss={handleDismiss}
           onRemove={handleRemove}
-          onViewMedia={handleViewMedia}
         />
       )}
     </main>
   );
 }
 
-function ReportDetailPanel({
-  report,
-  onClose,
-  onDismiss,
-  onRemove,
-  onViewMedia,
-}) {
-  const isComment = report.report_type === "Comment";
+function ReportDetailPanel({ report, onClose, onDismiss, onRemove }) {
+  const isComment = report.content_type?.toLowerCase() === "comment";
 
   return (
     <div style={styles.overlay}>
@@ -317,47 +284,19 @@ function ReportDetailPanel({
         </button>
 
         <p style={styles.detailLine}>
-          <strong>Target:</strong> {report.target_id}
+          <strong>Reporter:</strong> {shortId(report.reporter_id)}
         </p>
 
         <p style={styles.detailLine}>
-          <strong>Type:</strong> {report.report_type}
+          <strong>Content Type:</strong> {report.content_type}
         </p>
 
         <p style={styles.detailLine}>
-          <strong>Content Owner:</strong> {report.content_owner || "-"}
-        </p>
-
-        <p style={styles.detailLine}>
-          <strong>Reporter:</strong> {report.reporter || "-"}
+          <strong>Report Type:</strong> {report.report_type}
         </p>
 
         <p style={styles.detailLine}>
           <strong>Submitted:</strong> {formatDateTime(report.submitted_at)}
-        </p>
-
-        {!isComment && (
-          <div style={styles.mediaRow}>
-            <strong>Media:</strong>
-
-            <button
-              type="button"
-              onClick={() => onViewMedia(report)}
-              style={{
-                ...styles.mediaButton,
-                ...(report.media_path ? styles.mediaButtonActive : {}),
-              }}
-            >
-              View
-            </button>
-          </div>
-        )}
-
-        <p style={styles.detailParagraph}>
-          <strong>{isComment ? "Comment text:" : "Post caption:"}</strong>{" "}
-          {isComment
-            ? report.comment_text || "-"
-            : report.post_caption || "-"}
         </p>
 
         <div style={styles.actionRow}>
@@ -380,6 +319,11 @@ function ReportDetailPanel({
       </aside>
     </div>
   );
+}
+
+function shortId(id) {
+  if (!id) return "-";
+  return id.slice(0, 8);
 }
 
 function formatDateTime(value) {

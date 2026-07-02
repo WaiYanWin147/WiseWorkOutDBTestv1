@@ -34,7 +34,7 @@ export default function AdminAuditLogsPage() {
 
     const { data, error } = await supabase
       .from("audit_logs")
-      .select("id, admin_id, admin_email, action, target, target_type, created_at")
+      .select("audit_log_id, admin_id, admin_email, action, target, target_type, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -191,7 +191,7 @@ export default function AdminAuditLogsPage() {
             <div style={styles.emptyMessage}>Loading audit logs...</div>
           ) : filteredLogs.length > 0 ? (
             filteredLogs.map((log) => (
-              <div key={log.id} style={styles.tableRow}>
+              <div key={log.audit_log_id} style={styles.tableRow}>
                 <div style={{ ...styles.rowCell, flex: 1.3 }}>
                   {formatDateTime(log.created_at)}
                 </div>

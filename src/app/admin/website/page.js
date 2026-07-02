@@ -108,7 +108,7 @@ export default function AdminWebsitePage() {
     const { data, error } = await supabase
       .from("reviews")
       .select(
-        "id, reviewer_name, tier, rating, feedback, media_name, media_path, submitted_at, ai_analysis, featured_on_website"
+        "review_id, rating, feedback, media_path, submitted_at, ai_analysis, featured_on_website, profiles(full_name)"
       )
       .order("submitted_at", { ascending: false });
 
@@ -117,14 +117,25 @@ export default function AdminWebsitePage() {
       return;
     }
 
-    const positiveReviews = (data || []).filter(
+    const formattedReviews = (data || []).map((review) => ({
+      id: review.review_id,
+      reviewer_name: review.profiles?.full_name || "-",
+      rating: review.rating,
+      feedback: review.feedback,
+      media_path: review.media_path,
+      submitted_at: review.submitted_at,
+      ai_analysis: review.ai_analysis,
+      featured_on_website: review.featured_on_website,
+    }));
+
+    const positiveReviews = formattedReviews.filter(
       (review) =>
         review.featured_on_website !== true &&
         review.ai_analysis === "positive" &&
         Number(review.rating) >= 4
     );
 
-    setFeaturedReviews((data || []).filter((review) => review.featured_on_website));
+    setFeaturedReviews(formattedReviews.filter((review) => review.featured_on_website));
     setAvailableReviews(positiveReviews);
   }
 
@@ -153,7 +164,7 @@ export default function AdminWebsitePage() {
     const { error } = await supabase
       .from("reviews")
       .update({ featured_on_website: true })
-      .eq("id", review.id);
+      .eq("review_id", review.id);
 
     if (error) {
       alert(error.message);
@@ -173,7 +184,7 @@ export default function AdminWebsitePage() {
     const { error } = await supabase
       .from("reviews")
       .update({ featured_on_website: false })
-      .eq("id", review.id);
+      .eq("review_id", review.id);
 
     if (error) {
       alert(error.message);

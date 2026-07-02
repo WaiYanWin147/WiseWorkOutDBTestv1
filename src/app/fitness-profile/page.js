@@ -49,7 +49,6 @@ export default function FitnessProfilePage() {
         email: user.email,
         user_type: "Fitness professional",
         status: "active",
-        approved: false,
       },
       {
         onConflict: "id",
@@ -123,21 +122,37 @@ export default function FitnessProfilePage() {
       .from("profiles")
       .update({
         full_name: displayName,
-        display_name: displayName,
-        bio: bio,
-        experience: Number(experience),
-        specializations: specializations,
-        certificate_name: certificate.name,
-        certificate_path: filePath,
         user_type: "Fitness professional",
         status: "pending",
-        approved: false,
-        submitted_at: new Date().toISOString(),
       })
       .eq("id", user.id);
 
     if (profileError) {
       alert(profileError.message);
+      return;
+    }
+
+    const { error: proError } = await supabase
+      .from("fitness_professional")
+      .upsert(
+        {
+          profile_id: user.id,
+          display_name: displayName,
+          bio: bio,
+          experience: Number(experience),
+          specializations: specializations,
+          certificate_name: certificate.name,
+          certificate_path: filePath,
+          approved: false,
+          submitted_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "profile_id",
+        }
+      );
+
+    if (proError) {
+      alert(proError.message);
       return;
     }
 
