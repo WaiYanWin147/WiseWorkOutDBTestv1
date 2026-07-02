@@ -38,7 +38,6 @@ export default function WelcomePage() {
         email: user.email,
         user_type: "Free",
         status: "active",
-        approved: true,
       },
       {
         onConflict: "id",
