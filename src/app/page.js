@@ -167,7 +167,7 @@ export default function HomePage() {
     const { data, error } = await supabase
       .from("reviews")
       .select(
-        "id, reviewer_name, rating, feedback, submitted_at, featured_on_website"
+        "review_id, rating, feedback, submitted_at, featured_on_website, profiles(full_name)"
       )
       .eq("featured_on_website", true)
       .order("submitted_at", { ascending: false })
@@ -178,7 +178,16 @@ export default function HomePage() {
       return;
     }
 
-    setFeaturedReviews(data || []);
+    const formattedReviews = (data || []).map((review) => ({
+      id: review.review_id,
+      reviewer_name: review.profiles?.full_name || "-",
+      rating: review.rating,
+      feedback: review.feedback,
+      submitted_at: review.submitted_at,
+      featured_on_website: review.featured_on_website,
+    }));
+
+    setFeaturedReviews(formattedReviews);
   }
 
   const testimonialReviews =
