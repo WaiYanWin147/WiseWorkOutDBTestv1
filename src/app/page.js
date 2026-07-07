@@ -222,12 +222,20 @@ export default function HomePage() {
           <a href="#faq">FAQ</a>
         </div>
 
-        <Link
-          href="/register"
-          className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
-        >
-          Register
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-[13px] font-semibold text-[#6c5cff] px-5 py-3"
+          >
+            Login
+          </Link>
+          <Link
+            href="/register"
+            className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
+          >
+            Register
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}
