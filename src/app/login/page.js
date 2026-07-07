@@ -71,6 +71,31 @@ export default function LoginPage() {
   }
 
   async function redirectByUserType(userId) {
+
+    // Check if admin first
+    const { data: adminRow } = await supabase
+      .from("admin")
+      .select("profile_id")
+      .eq("profile_id", userId)
+      .single();
+    if (adminRow) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email, status")
+        .eq("id", userId)
+        .single();
+      if (profile?.status !== "active") {
+        alert("This admin account is not active.");
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem("adminLoggedIn", "true");
+      localStorage.setItem("adminEmail", profile.email || "");
+      router.push("/admin/dashboard");
+      return;
+    }
+
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("user_type")
