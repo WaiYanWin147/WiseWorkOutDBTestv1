@@ -54,13 +54,32 @@ export default function ChoosePlanPage() {
     }
 
     if (selected === "priority") {
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ user_type: "Priority" })
         .eq("id", userData.user.id);
 
-      if (error) {
-        alert(error.message);
+      if (profileError) {
+        alert(profileError.message);
+        setLoading(false);
+        return;
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      const { error: priorityError } = await supabase
+        .from("priority_user")
+        .upsert(
+          {
+            profile_id: userData.user.id,
+            subscribed_at: now.toISOString(),
+            expires_at: expiresAt.toISOString(),
+          },
+          { onConflict: "profile_id" }
+        );
+      if (priorityError) {
+        alert(priorityError.message);
         setLoading(false);
         return;
       }
