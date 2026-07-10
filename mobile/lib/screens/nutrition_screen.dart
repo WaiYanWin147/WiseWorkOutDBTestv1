@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/section_card.dart';
 import '../widgets/section_header.dart';
+import 'food_scan_screen.dart';
+import 'log_meal_screen.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
@@ -16,11 +18,113 @@ class NutritionScreen extends StatefulWidget {
 
 class _NutritionScreenState extends State<NutritionScreen> {
   int _water = MockData.waterConsumed;
+  int _waterGoal = MockData.waterGoal;
+  bool _scanUnlocked = false;
 
   void _addWater() {
     setState(() {
-      _water = (_water + 250).clamp(0, MockData.waterGoal);
+      _water = (_water + 250).clamp(0, _waterGoal);
     });
+  }
+
+  void _showWaterSettings() {
+    final controller = TextEditingController(text: '$_waterGoal');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text(
+                    'Water Settings',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Daily water goal (ml)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    suffixText: 'ml',
+                    filled: true,
+                    fillColor: AppColors.cardMuted,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final goal = int.tryParse(controller.text.trim());
+                      if (goal != null && goal > 0) {
+                        setState(() {
+                          _waterGoal = goal;
+                          _water = _water.clamp(0, _waterGoal);
+                        });
+                      }
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -174,6 +278,33 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   Widget _aiFoodScanCard() {
+    if (_scanUnlocked) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FoodScanScreen()),
+            );
+          },
+          icon: const Icon(Icons.qr_code_scanner, size: 18),
+          label: const Text('AI Food Scan'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      );
+    }
     return SectionCard(
       color: AppColors.primarySoft,
       child: Column(
@@ -213,7 +344,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => setState(() => _scanUnlocked = true),
               icon: const Icon(Icons.workspace_premium, size: 18),
               label: const Text('Unlock Priority'),
               style: ElevatedButton.styleFrom(
@@ -237,7 +368,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   Widget _waterCard() {
-    final progress = _water / MockData.waterGoal;
+    final progress = _water / _waterGoal;
     return SectionCard(
       color: AppColors.cardMuted,
       child: Column(
@@ -255,7 +386,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
               ),
               const Spacer(),
               Text(
-                '$_water ml / ${MockData.waterGoal} ml',
+                '$_water ml / $_waterGoal ml',
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -292,7 +423,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: _showWaterSettings,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
@@ -318,7 +449,13 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   Widget _mealRow(Meal meal) {
-    return SectionCard(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LogMealScreen()),
+        );
+      },
+      child: SectionCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
@@ -384,6 +521,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

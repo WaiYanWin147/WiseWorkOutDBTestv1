@@ -5,6 +5,7 @@ class WorkoutPlan {
   final List<String> tags;
   final bool active;
   final List<String> categories;
+  final String createdBy;
   bool bookmarked;
 
   WorkoutPlan({
@@ -14,6 +15,7 @@ class WorkoutPlan {
     required this.tags,
     this.active = false,
     this.categories = const [],
+    this.createdBy = 'ShapeRush',
     this.bookmarked = false,
   });
 }

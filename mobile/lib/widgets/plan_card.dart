@@ -8,16 +8,20 @@ import 'section_card.dart';
 class PlanCard extends StatelessWidget {
   final WorkoutPlan plan;
   final VoidCallback onBookmarkTap;
+  final VoidCallback? onTap;
 
   const PlanCard({
     super.key,
     required this.plan,
     required this.onBookmarkTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
+    return GestureDetector(
+      onTap: onTap,
+      child: SectionCard(
       color: plan.active ? AppColors.primarySoft : AppColors.cardMuted,
       radius: 16,
       child: Column(
@@ -91,6 +95,7 @@ class PlanCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models/achievement.dart';
+import '../models/exercise.dart';
+import '../models/history_entry.dart';
+import '../models/leaderboard_entry.dart';
 import '../models/menu_item.dart';
 import '../models/nutrition.dart';
+import '../models/professional.dart';
 import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
 
@@ -108,4 +113,175 @@ class MockData {
       icon: Icons.lunch_dining,
     ),
   ];
+
+  // Fitness plan
+  static const String currentDayLabel = 'Day 1: Full Body Strength';
+  static const String currentDayMeta = '~45 min • 6 exercises';
+
+  static const List<Exercise> dayExercises = [
+    Exercise(name: 'Barbell Squats', sets: 3, reps: '10-12'),
+    Exercise(name: 'Barbell Bench Press', sets: 3, reps: '10-12'),
+    Exercise(name: 'Barbell Bent Over Row', sets: 3, reps: '10-12'),
+    Exercise(name: 'Triceps Dips', sets: 3, reps: '10-12'),
+    Exercise(name: 'Leg Raises', sets: 3, reps: '8-10', restSeconds: 45),
+    Exercise(name: 'Sumo Squats', sets: 3, reps: '10-12'),
+  ];
+
+  // Progress
+  static const List<int> weeklySteps = [9500, 4200, 3100, 6800, 12456, 8900, 7200];
+  static const List<int> weeklyCalories = [420, 310, 380, 460, 456, 510, 390];
+  static const List<String> weekDays = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
+
+  // Leaderboard
+  static const List<LeaderboardEntry> leaderboard = [
+    LeaderboardEntry(rank: 1, name: 'David Bernard', steps: 50324),
+    LeaderboardEntry(rank: 2, name: 'Sam Wilson', steps: 50024),
+    LeaderboardEntry(rank: 3, name: 'Dakota Brooke', steps: 47764),
+    LeaderboardEntry(rank: 4, name: 'Sam Wilson', steps: 50024),
+    LeaderboardEntry(rank: 5, name: 'Sam Wilson', steps: 50024),
+    LeaderboardEntry(rank: 6, name: 'Sam Wilson', steps: 50024),
+    LeaderboardEntry(rank: 7, name: 'Sam Wilson', steps: 50024),
+  ];
+
+  static const LeaderboardEntry myPosition =
+      LeaderboardEntry(rank: 18, name: 'Christopher Heron', steps: 2478, isMe: true);
+
+  // Achievements
+  static const List<Achievement> achievements = [
+    Achievement(label: '3-Day Streak', icon: Icons.local_fire_department, achieved: true),
+    Achievement(label: '7-Day Streak', icon: Icons.local_fire_department),
+    Achievement(label: '30-Day Streak', icon: Icons.whatshot),
+    Achievement(label: '100-Day Streak', icon: Icons.ac_unit),
+    Achievement(label: 'Completed First Program', icon: Icons.emoji_events),
+  ];
+
+  // Workout history
+  static const List<HistoryEntry> workoutHistory = [
+    HistoryEntry(title: 'Upper Body Strength', when: 'Yesterday'),
+    HistoryEntry(title: 'Upper Body Strength', when: '2 days ago'),
+    HistoryEntry(title: 'Full Body Strength', when: '3 days ago'),
+    HistoryEntry(title: 'Upper Body Strength', when: '5 days ago'),
+    HistoryEntry(title: 'Lower Body Strength', when: '6 days ago'),
+    HistoryEntry(title: 'Lower Body Strength', when: '7 days ago'),
+    HistoryEntry(title: 'Upper Body Strength', when: '8 days ago'),
+    HistoryEntry(title: 'Full Body Strength', when: '10 days ago'),
+    HistoryEntry(title: 'Upper Body Strength', when: '11 days ago'),
+    HistoryEntry(title: 'Upper Body Strength', when: '12 days ago'),
+    HistoryEntry(title: 'Full Body Strength', when: '12 days ago'),
+    HistoryEntry(title: 'Full Body Strength', when: '13 days ago'),
+    HistoryEntry(title: 'Upper Body Strength', when: '1 week ago'),
+  ];
+
+  // Fitness professionals
+  static const List<String> professionalFilters = [
+    'All',
+    'Nutrition',
+    'Strength',
+    'Weight Loss',
+    'HIIT',
+  ];
+
+  static const List<Professional> professionals = [
+    Professional(
+        name: 'Wade Warren',
+        specialties: 'Nutrition • Strength',
+        rating: 5.0,
+        reviewCount: 6),
+    Professional(
+        name: 'Bessie Cooper',
+        specialties: 'Nutrition • Yoga',
+        rating: 4.5,
+        reviewCount: 23),
+    Professional(
+        name: 'Kevin Bernard',
+        specialties: 'HIIT • Strength',
+        rating: 5.0,
+        reviewCount: 6),
+    Professional(
+        name: 'Jane Mcgee',
+        specialties: 'Nutrition • Strength',
+        rating: 4.7,
+        reviewCount: 9),
+    Professional(
+        name: 'Mike Williamson',
+        specialties: 'Strength • Weight Loss',
+        rating: 4.8,
+        reviewCount: 14),
+  ];
+
+  static const String professionalAbout =
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do '
+      'eiusmod tempor incididunt ut labore et dolore magna.';
+
+  static const List<Review> reviews = [
+    Review(
+        reviewer: 'Christopher',
+        rating: 5.0,
+        text:
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.'),
+    Review(
+        reviewer: 'Christopher',
+        rating: 5.0,
+        text:
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.'),
+    Review(
+        reviewer: 'Christopher',
+        rating: 5.0,
+        text:
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.'),
+    Review(
+        reviewer: 'Christopher',
+        rating: 5.0,
+        text:
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.'),
+  ];
+
+  static const List<ChatMessage> chatMessages = [
+    ChatMessage(text: 'Hi, Wade!', fromMe: true),
+    ChatMessage(
+        text: 'Can you help me create a 30-day weight loss program?',
+        fromMe: true),
+    ChatMessage(text: "Sure, let me know if you need any adjustments."),
+    ChatMessage(
+        text: '',
+        planTitle: '30-Day Full Body Fat Burn'),
+  ];
+
+  // AI food scan
+  static const String scannedFoodName = 'Tuna Poke Bowl';
+  static const int scannedCalories = 685;
+  static const List<(String, int)> scannedIngredients = [
+    ('Rice', 205),
+    ('Tuna', 275),
+    ('Green beans', 15),
+    ('Avocado', 15),
+  ];
+
+  // Saved plans
+  static List<WorkoutPlan> savedPlans() => [
+        WorkoutPlan(
+          title: '30-Day Full Body Fat Burn',
+          duration: '30 Days',
+          sessionLength: '~45 min',
+          tags: const ['Full Body', 'Fat Loss', 'Strength'],
+          bookmarked: true,
+          createdBy: 'ShapeRush',
+        ),
+        WorkoutPlan(
+          title: 'Morning Yoga',
+          duration: '30 Days',
+          sessionLength: '~45 min',
+          tags: const ['Full Body', 'Fat Loss', 'Strength'],
+          bookmarked: true,
+          createdBy: 'ShapeRush',
+        ),
+        WorkoutPlan(
+          title: "Elise's Fitness Plan",
+          duration: '30 Days',
+          sessionLength: '~45 min',
+          tags: const ['Full Body', 'Fat Loss', 'Strength'],
+          bookmarked: true,
+          createdBy: 'Wade Warren',
+        ),
+      ];
 }

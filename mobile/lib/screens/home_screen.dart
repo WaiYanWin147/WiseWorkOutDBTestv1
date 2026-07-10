@@ -5,6 +5,13 @@ import '../models/menu_item.dart';
 import '../theme/app_theme.dart';
 import '../widgets/calorie_ring.dart';
 import '../widgets/section_card.dart';
+import 'achievements_screen.dart';
+import 'fitness_plan_screen.dart';
+import 'leaderboard_screen.dart';
+import 'log_meal_screen.dart';
+import 'progress_screen.dart';
+import 'saved_plans_screen.dart';
+import 'workout_history_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -25,11 +32,11 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 20),
           _dailyProgress(),
           const SizedBox(height: 16),
-          _todaysPlan(),
+          _todaysPlan(context),
           const SizedBox(height: 16),
-          _quickActions(),
+          _quickActions(context),
           const SizedBox(height: 16),
-          _menuList(),
+          _menuList(context),
         ],
       ),
     );
@@ -190,7 +197,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _todaysPlan() {
+  Widget _todaysPlan(BuildContext context) {
     return SectionCard(
       color: AppColors.primarySoft,
       child: Row(
@@ -236,7 +243,11 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FitnessPlanScreen()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -262,7 +273,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _quickActions() {
+  Widget _quickActions(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -271,6 +282,11 @@ class HomeScreen extends StatelessWidget {
             iconBg: AppColors.primarySoft,
             iconColor: AppColors.primary,
             label: 'Log Workout',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FitnessPlanScreen()),
+              );
+            },
           ),
         ),
         const SizedBox(width: 14),
@@ -280,6 +296,11 @@ class HomeScreen extends StatelessWidget {
             iconBg: const Color(0xFFEFF7DC),
             iconColor: AppColors.green,
             label: 'Log Meal',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LogMealScreen()),
+              );
+            },
           ),
         ),
       ],
@@ -291,8 +312,11 @@ class HomeScreen extends StatelessWidget {
     required Color iconBg,
     required Color iconColor,
     required String label,
+    VoidCallback? onTap,
   }) {
-    return SectionCard(
+    return GestureDetector(
+      onTap: onTap,
+      child: SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -315,10 +339,11 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _menuList() {
+  Widget _menuList(BuildContext context) {
     return SectionCard(
       color: AppColors.cardMuted,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -327,7 +352,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             for (var i = 0; i < MockData.homeMenu.length; i++) ...[
-              _menuRow(MockData.homeMenu[i]),
+              _menuRow(context, MockData.homeMenu[i]),
               if (i != MockData.homeMenu.length - 1)
                 const Divider(height: 1, color: AppColors.border),
             ],
@@ -337,7 +362,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _menuRow(MenuItem item) {
+  void _openMenuItem(BuildContext context, String label) {
+    final screens = <String, Widget Function()>{
+      'Progress': () => const ProgressScreen(),
+      'Leaderboard': () => const LeaderboardScreen(),
+      'My Achievements': () => const AchievementsScreen(),
+      'Saved Workout Plans': () => const SavedPlansScreen(),
+      'Workout History': () => const WorkoutHistoryScreen(),
+    };
+    final builder = screens[label];
+    if (builder != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => builder()));
+    }
+  }
+
+  Widget _menuRow(BuildContext context, MenuItem item) {
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
@@ -360,7 +399,7 @@ class HomeScreen extends StatelessWidget {
       ),
       trailing:
           const Icon(Icons.chevron_right, color: AppColors.textMuted),
-      onTap: () {},
+      onTap: () => _openMenuItem(context, item.label),
     );
   }
 }

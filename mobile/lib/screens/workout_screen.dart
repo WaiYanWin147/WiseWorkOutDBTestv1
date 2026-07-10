@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
+import '../models/professional.dart';
 import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
 import '../widgets/filter_chips.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/section_card.dart';
 import '../widgets/section_header.dart';
+import 'chat_list_screen.dart';
+import 'plan_detail_screen.dart';
+import 'professional_detail_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
@@ -18,6 +22,8 @@ class WorkoutScreen extends StatefulWidget {
 class _WorkoutScreenState extends State<WorkoutScreen> {
   int _topTab = 0;
   String _filter = 'All';
+  String _proFilter = 'All';
+  bool _fpUnlocked = false;
   late final WorkoutPlan _activePlan;
   late final List<WorkoutPlan> _freePlans;
 
@@ -37,19 +43,45 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showChatFab = _topTab == 1 && _fpUnlocked;
     return SafeArea(
       bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenPadding,
-          16,
-          AppSpacing.screenPadding,
-          24,
-        ),
+      child: Stack(
         children: [
-          _topToggle(),
-          const SizedBox(height: 22),
-          if (_topTab == 0) ..._workoutTab() else _professionalTab(),
+          ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding,
+              16,
+              AppSpacing.screenPadding,
+              24,
+            ),
+            children: [
+              _topToggle(),
+              const SizedBox(height: 22),
+              if (_topTab == 0)
+                ..._workoutTab()
+              else if (_fpUnlocked)
+                ..._professionalsTab()
+              else
+                _professionalTab(),
+            ],
+          ),
+          if (showChatFab)
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const ChatListScreen()),
+                  );
+                },
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.chat_bubble_outline,
+                    color: Colors.white),
+              ),
+            ),
         ],
       ),
     );
@@ -104,6 +136,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         plan: _activePlan,
         onBookmarkTap: () =>
             setState(() => _activePlan.bookmarked = !_activePlan.bookmarked),
+        onTap: () => _openPlan(_activePlan.title),
       ),
       const SizedBox(height: 24),
       const SectionHeader('Free Plans'),
@@ -119,6 +152,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           plan: plan,
           onBookmarkTap: () =>
               setState(() => plan.bookmarked = !plan.bookmarked),
+          onTap: () => _openPlan(plan.title),
         ),
         const SizedBox(height: 14),
       ],
@@ -133,6 +167,123 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           ),
         ),
     ];
+  }
+
+  void _openPlan(String title) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PlanDetailScreen(title: title)),
+    );
+  }
+
+  List<Widget> _professionalsTab() {
+    return [
+      TextField(
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Search fitness professionals',
+          hintStyle:
+              const TextStyle(fontSize: 13, color: AppColors.textMuted),
+          suffixIcon: const Icon(Icons.search,
+              size: 20, color: AppColors.textMuted),
+          filled: true,
+          fillColor: AppColors.cardMuted,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      const SectionHeader('More Fitness Professionals'),
+      const SizedBox(height: 12),
+      FilterChips(
+        options: MockData.professionalFilters,
+        selected: _proFilter,
+        onSelected: (value) => setState(() => _proFilter = value),
+      ),
+      const SizedBox(height: 16),
+      for (final pro in MockData.professionals) ...[
+        _professionalCard(pro),
+        const SizedBox(height: 12),
+      ],
+    ];
+  }
+
+  Widget _professionalCard(Professional pro) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ProfessionalDetailScreen(professional: pro),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardMuted,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              backgroundColor: AppColors.primarySoft,
+              child: Icon(Icons.person, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pro.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    pro.specialties,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star,
+                          size: 14, color: AppColors.amber),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${pro.rating}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${pro.reviewCount} Reviews',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _professionalTab() {
@@ -172,7 +323,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => setState(() => _fpUnlocked = true),
                   icon: const Icon(Icons.workspace_premium, size: 18),
                   label: const Text(
                     'Unlock Priority',
