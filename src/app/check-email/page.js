@@ -1,12 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function CheckEmailPage() {
+function CheckEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "your email";
 
+  return (
+    <p className="mt-5 text-[16px] leading-7 text-black">
+      To keep a trusted and safe community, we&apos;ve sent an email to{" "}
+      <span className="font-bold">{email}</span> for verification,
+      you&apos;ll only do this once.
+    </p>
+  );
+}
+
+export default function CheckEmailPage() {
   return (
     <main className="min-h-screen bg-[#f8f8ff] text-black">
       {/* Navbar */}
@@ -36,11 +47,9 @@ export default function CheckEmailPage() {
         <div className="w-full max-w-[640px] bg-white rounded-[28px] shadow-sm px-10 md:px-12 py-12">
           <h1 className="text-[22px] font-bold">Check your Email</h1>
 
-          <p className="mt-5 text-[16px] leading-7 text-black">
-            To keep a trusted and safe community, we’ve sent an email to{" "}
-            <span className="font-bold">{email}</span> for verification,
-            you’ll only do this once.
-          </p>
+          <Suspense fallback={<p className="mt-5 text-[16px] leading-7 text-black">Loading...</p>}>
+            <CheckEmailContent />
+          </Suspense>
 
           <div className="mt-12 flex justify-center">
             <MailIllustration />
