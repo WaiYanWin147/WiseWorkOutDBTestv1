@@ -14,7 +14,6 @@ class PostCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Post image：约 65%
           Expanded(
             flex: 65,
             child: Container(
@@ -23,7 +22,6 @@ class PostCard extends StatelessWidget {
             ),
           ),
 
-          // Post information：约 35%
           Expanded(
             flex: 35,
             child: Padding(
