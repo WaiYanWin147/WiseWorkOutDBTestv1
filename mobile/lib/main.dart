@@ -9,7 +9,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: 'https://tltbtwctxaxsevcxwwco.supabase.co',
-    anonKey: 'eyJhbGci••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••',
+    publishableKey: 'sb_publishable_7Wige7bkmk3CgHxcch1N6w_aZcBVR7i',
   );
 
   runApp(const ShapeRushApp());
