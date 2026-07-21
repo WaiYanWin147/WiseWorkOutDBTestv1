@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../models/achievement.dart';
-import '../models/exercise.dart';
-import '../models/history_entry.dart';
-import '../models/leaderboard_entry.dart';
-import '../models/menu_item.dart';
-import '../models/nutrition.dart';
-import '../models/professional.dart';
-import '../models/workout_plan.dart';
+import '../models/client/achievement.dart';
+import '../models/client/exercise.dart';
+import '../models/client/history_entry.dart';
+import '../models/client/leaderboard_entry.dart';
+import '../models/client/menu_item.dart';
+import '../models/client/nutrition.dart';
+import '../models/client/professional.dart';
+import '../models/client/workout_plan.dart';
 import '../theme/app_theme.dart';
 
 class MockData {
