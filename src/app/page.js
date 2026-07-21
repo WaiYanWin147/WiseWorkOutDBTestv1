@@ -117,10 +117,22 @@ export default function HomePage() {
   const [faq, setFaq] = useState(defaultFaq);
   const [featuredReviews, setFeaturedReviews] = useState([]);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     fetchWebsiteContent();
     fetchFeaturedReviews();
+
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+    });
+
+    return () => listener.subscription.unsubscribe();
+
   }, []);
 
   useEffect(() => {
@@ -222,12 +234,42 @@ export default function HomePage() {
           <a href="#faq">FAQ</a>
         </div>
 
-        <Link
-          href="/register"
-          className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
-        >
-          Register
-        </Link>
+        <div className="flex items-center gap-3">
+          {loggedIn ? (
+            <>
+              <Link
+                href="/welcome"
+                className="text-[13px] font-semibold text-[#6c5cff] px-5 py-3"
+              >
+                Download
+              </Link>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setLoggedIn(false);
+                }}
+                className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-[13px] font-semibold text-[#6c5cff] px-5 py-3"
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="bg-[#6c5cff] text-white px-8 py-3 rounded-xl text-[13px] font-semibold"
+              >
+                Register
+              </Link>
+            </>
+          )}
+        </div>
       </nav>
 
       {/* Hero */}
