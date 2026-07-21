@@ -66,18 +66,12 @@ class _CreatePlanScheduleState extends State<CreatePlanSchedule> {
   }
 
   Future<void> createNewExercise() async {
-    final result = await Navigator.push<Exercise>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => const CreateExercise(),
       ),
     );
-
-    if (result != null) {
-      setState(() {
-        exercises.add(result);
-      });
-    }
   }
 
   void showAddExerciseOptions() {

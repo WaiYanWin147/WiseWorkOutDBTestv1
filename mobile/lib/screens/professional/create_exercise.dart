@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/professional/mock_exercises.dart';
-import '../../models/professional/workout_plan.dart';
 import '../../widgets/professional/mobile_page_wrapper.dart';
 
 class CreateExercise extends StatefulWidget {
@@ -27,6 +27,7 @@ class _CreateExerciseState extends State<CreateExercise> {
 
   String muscleGroup = 'Chest';
   String equipment = 'Barbell';
+  bool isSaving = false;
 
   @override
   void dispose() {
@@ -37,22 +38,59 @@ class _CreateExerciseState extends State<CreateExercise> {
     super.dispose();
   }
 
-  void saveExercise() {
+  Future<void> saveExercise() async {
     final name = nameController.text.trim();
     final reps = repsController.text.trim();
     final rest = restController.text.trim();
+    final instructions = instructionController.text.trim();
 
     if (name.isEmpty) {
       showMessage('Please enter exercise name.');
       return;
     }
 
-    final newExercise = Exercise(
-      name: name,
-      detail: '3 × $reps • ${rest}s rest',
-    );
+    final repNumbers = RegExp(r'\d+')
+        .allMatches(reps)
+        .map((match) => int.parse(match.group(0)!))
+        .toList();
+    final repMin = repNumbers.isNotEmpty ? repNumbers.first : null;
+    final repMax = repNumbers.length > 1 ? repNumbers.last : repMin;
+    final restSec = int.tryParse(rest);
 
-    Navigator.pop(context, newExercise);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      showMessage('You must be signed in to save an exercise.');
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      await Supabase.instance.client.from('exercise_library').insert({
+        'professional_id': userId,
+        'name': name,
+        'muscle_group': muscleGroup,
+        'equipment': equipment,
+        'default_rep_min': repMin,
+        'default_rep_max': repMax,
+        'default_rest_sec': restSec,
+        'instructions': instructions,
+      });
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      showMessage('Failed to save exercise: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
+    }
   }
 
   void showMessage(String message) {
@@ -198,7 +236,7 @@ class _CreateExerciseState extends State<CreateExercise> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: saveExercise,
+                  onPressed: isSaving ? null : saveExercise,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6C63FF),
                     foregroundColor: Colors.white,
@@ -207,13 +245,24 @@ class _CreateExerciseState extends State<CreateExercise> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Save Exercise',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Save Exercise',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                 ),
               ),
             ],

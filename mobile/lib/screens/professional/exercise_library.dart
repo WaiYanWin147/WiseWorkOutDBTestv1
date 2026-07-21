@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/professional/mock_exercises.dart';
 import '../../models/professional/library_exercise.dart';
@@ -16,8 +17,60 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
   String selectedMuscleGroup = 'All';
   String selectedEquipment = 'All';
 
+  List<LibraryExercise> _exercises = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExercises();
+  }
+
+  Future<void> _loadExercises() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        setState(() {
+          _exercises = [];
+        });
+        return;
+      }
+
+      final response = await Supabase.instance.client
+          .from('exercise_library')
+          .select('name, muscle_group, equipment')
+          .eq('professional_id', userId)
+          .order('name');
+
+      setState(() {
+        _exercises = (response as List<dynamic>)
+            .map((row) => LibraryExercise(
+                  name: row['name'] as String,
+                  muscleGroup: row['muscle_group'] as String,
+                  equipment: row['equipment'] as String,
+                ))
+            .toList();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load exercises: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   List<LibraryExercise> get filteredExercises {
-    return exerciseLibrary.where((exercise) {
+    return _exercises.where((exercise) {
       final bool matchesSearch = exercise.name.toLowerCase().contains(
             searchText.toLowerCase(),
           );
@@ -268,7 +321,11 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
 
               // exercise list
               Expanded(
-                child: filteredExercises.isEmpty
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : filteredExercises.isEmpty
                     ? Center(
                         child: Text(
                           'No exercises found',
